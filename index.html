@@ -194,7 +194,11 @@ li.d-g:before{background:#2e6b1f}li.d-y:before{background:#c99a1c}li.d-r:before{
 .trc{border:1px solid #d8dee6;border-left:6px solid #1f4e79;border-radius:10px;padding:10px 14px;margin:10px 0;background:#f7f9fb}
 .trc ul{margin:4px 0;padding-left:18px}
 nav.tabs{flex-wrap:wrap;row-gap:4px}
-.money.pay .mv{white-space:nowrap}.money{max-width:100%;box-sizing:border-box}
+.money{max-width:100%;box-sizing:border-box;min-width:0}.money .mv,.money .mt{overflow-wrap:anywhere}
+/* v8: long pay text wraps inside the chip, so use a rounded box rather than a full pill */
+.money.pay{border-radius:14px}
+.svcard dd .pill,.summary .pill{white-space:normal;max-width:100%}
+.svcard .money .mv,.cmpt .money .mv{font-size:1rem}
 .pickers{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px}.pickers>label:nth-of-type(3){grid-column:1/-1}.pickers select{width:100%}@media(max-width:640px){.pickers{grid-template-columns:1fr!important}}.pfilters select{min-width:250px;max-width:100%}
 .pfull{text-transform:none;letter-spacing:0;font-weight:500;font-size:.85rem;color:#3b4652}
 /* v7: use more width on big screens; three pickers in a row when there is room */
@@ -283,6 +287,10 @@ nav.tabs{flex-wrap:wrap;row-gap:4px}
 
 <footer>Costs are tuition estimates for your remaining credits. With the reimbursement box checked, they subtract employer reimbursement of $5,250 a year (C or better in each class); full-time and relocation programs (Buffalo, Northeastern J+DS) get none, since full-time day classes mean leaving your job. Your remote job travels with you for temporary stays elsewhere, checked November 19, 2026. Salaries come from postings saved November 2, 2026, or from BLS national medians where marked. Years assume part-time study and are estimates.</footer>
 </section>
+
+
+
+
 
 
 
@@ -559,12 +567,15 @@ function fill(){
   document.getElementById('pfcount').textContent=`Showing ${nb} of ${P.ba.length} bachelor's, ${nm-1} of ${P.ma.length-1} master's and ${nr} of ${P.roles.length} roles.`;
 }
 function drawMap(ba,ma,role,ev){
-  const X=[95,360,620,860], top=92, lane=60, H=top+T.length*lane+10;
+  /* X = where each column's dots sit. Column 0 is wider and its dot sits at the right, so thread names fit to its left. */
+  const X=[205,360,620,860], CX=[120,360,620,860], CW=[220,200,200,200], top=92, lane=60, H=top+T.length*lane+10;
   const svg=document.getElementById('pmap'); svg.setAttribute('viewBox',`0 0 1000 ${H}`);
   const hoods=[['You now','Skills today'],["Bachelor's",ba.short],["Master's",ma.short],['Role',role.title]];
   let h='';
-  hoods.forEach(([a,b],i)=>{const w=i===0?150:200,x=X[i]-w/2; h+=`<rect x="${x}" y="8" width="${w}" height="${H-14}" rx="14" fill="${i%2?'#efede8':'#f3f1ec'}" stroke="#d9d6cf"/>
-   <text x="${X[i]}" y="32" text-anchor="middle" class="hood">${esc(a)}</text><text x="${X[i]}" y="52" text-anchor="middle" class="hoodsub">${esc(b.length>30?b.slice(0,29)+'…':b)}</text>`;});
+  hoods.forEach(([a,b],i)=>{const x=CX[i]-CW[i]/2; h+=`<rect x="${x}" y="8" width="${CW[i]}" height="${H-14}" rx="14" fill="${i%2?'#efede8':'#f3f1ec'}" stroke="#d9d6cf"/>
+   <text x="${CX[i]}" y="32" text-anchor="middle" class="hood">${esc(a)}</text><text x="${CX[i]}" y="52" text-anchor="middle" class="hoodsub">${esc(b.length>28?b.slice(0,27)+'…':b)}</text>`;});
+  /* split long thread names over two lines at the space nearest the middle */
+  const split=s=>{ if(s.length<=22) return [s]; const mid=s.length/2; let best=-1; [...s].forEach((c,i)=>{ if(c===' '&&(best<0||Math.abs(i-mid)<Math.abs(best-mid))) best=i; }); return best<0?[s]:[s.slice(0,best),s.slice(best+1)]; };
   T.forEach((t,i)=>{
     const y=top+i*lane+lane/2, s=ev.seg[t.id], b=ba.th[t.id], m=ma.th[t.id], sel=st.sel===t.id;
     const line=(x1,x2,c,dash,w)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${COL[c]}" stroke-width="${w}" stroke-linecap="round" ${dash?'stroke-dasharray="2 9"':''}/>`;
@@ -578,7 +589,8 @@ function drawMap(ba,ma,role,ev){
     h+=`<circle cx="${X[0]}" cy="${y}" r="10" fill="${COL[t.you]}"/>`;
     h+=stn(X[1],b.cov,s.s1); h+=stn(X[2],m.cov,s.s2==='carry'?'carry':s.s2);
     if(s.need) h+=`<circle cx="${X[3]}" cy="${y}" r="${s.need==='core'?14:9}" fill="${s.need==='core'?COL[s.s3]:'#fff'}" stroke="${COL[s.s3]}" stroke-width="4"/>`;
-    h+=`<text x="${X[0]-62}" y="${y-16}" class="lname">${esc(t.name)}</text>`;
+    const nm=split(t.name);
+    h+=`<text x="${CX[0]-CW[0]/2+10}" y="${nm.length>1?y-3:y+5}" class="lname">${nm.map((s,j)=>`<tspan x="${CX[0]-CW[0]/2+10}"${j?' dy="15"':''}>${esc(s)}</tspan>`).join('')}</text>`;
     if(s.need) h+=`<text x="${X[3]+22}" y="${y+5}" class="lneed">${s.need==='core'?'core':'helps'}</text>`;
     h+=`</g>`;
   });
