@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Role Explorer: Pathways, Schools and Roles</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --text-xs:clamp(.75rem,.7rem + .25vw,.875rem);--text-sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --text-base:clamp(1rem,.95rem + .25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + .75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;
+  --bg:#f6f5f1;--surface:#fdfcfa;--surface-2:#efede8;--border:#d9d6cf;--text:#23221d;--muted:#64625b;
+  --primary:#1f4e79;--primary-hl:#dbe5ee;
+  --g:#2e6b1f;--g-bg:#e1eed9;--y:#8a5b00;--y-bg:#f4e8c8;--r:#9b2c22;--r-bg:#f6dcd7;
+  --radius:.625rem;--font-display:'General Sans','Segoe UI',sans-serif;--font-body:'Satoshi','Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:var(--text-base);line-height:1.5}
+a{color:var(--primary)}
+.wrap{max-width:60rem;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-12)}
+header h1{font-family:var(--font-display);font-size:var(--text-xl);font-weight:600;line-height:1.15;margin:0 0 var(--space-2)}
+header p{margin:0 0 var(--space-3);color:var(--muted);font-size:var(--text-sm);max-width:44rem}
+.legend{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:var(--space-3) 0 var(--space-4);font-size:var(--text-xs)}
+.pill{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1) var(--space-2);border-radius:999px;font-weight:700;font-size:var(--text-xs);white-space:nowrap}
+.fit-green{background:var(--g-bg);color:var(--g)}.fit-yellow{background:var(--y-bg);color:var(--y)}.fit-red{background:var(--r-bg);color:var(--r)}
+.dot{width:.6rem;height:.6rem;border-radius:50%;background:currentColor}
+.controls{position:sticky;top:0;z-index:5;background:var(--bg);padding:var(--space-3) 0;border-bottom:1px solid var(--border);margin-bottom:var(--space-4)}
+.search{width:100%;padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius);font:inherit;font-size:var(--text-sm);background:var(--surface)}
+.filters{display:flex;gap:var(--space-2);overflow-x:auto;padding-top:var(--space-3);scrollbar-width:thin}
+.filters select{max-width:15rem}
+.filters select,.toggle{flex:0 0 auto;font:inherit;font-size:var(--text-sm);padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);min-height:2.5rem}
+.toggle[aria-pressed=true]{background:var(--primary);color:#fff;border-color:var(--primary)}
+.count{font-size:var(--text-xs);color:var(--muted);margin-top:var(--space-2)}
+.list{display:grid;gap:var(--space-3)}
+.card{background:var(--surface);border:1px solid var(--border);border-left:6px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card.green{border-left-color:var(--g)}.card.yellow{border-left-color:#c99a1c}.card.red{border-left-color:var(--r)}
+.card>button{all:unset;display:block;width:100%;box-sizing:border-box;padding:var(--space-4);cursor:pointer}
+.card>button:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
+.top{display:flex;justify-content:space-between;gap:var(--space-3);align-items:flex-start}
+.title{font-weight:700;font-size:var(--text-base);line-height:1.3}
+.org{color:var(--muted);font-size:var(--text-sm)}
+.meta{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
+.tag{font-size:var(--text-xs);padding:2px var(--space-2);border-radius:var(--space-1);background:var(--surface-2);color:var(--text)}
+.tag.star{background:var(--primary);color:#fff;font-weight:700}
+.tag.urgent{background:var(--r);color:#fff;font-weight:700}
+.why{margin:var(--space-2) 0 0;font-size:var(--text-sm)}
+.chev{flex:0 0 auto;transition:transform .2s;color:var(--muted)}
+.card.open .chev{transform:rotate(180deg)}
+.body{display:none;padding:0 var(--space-4) var(--space-4);font-size:var(--text-sm)}
+.card.open .body{display:block}
+.body h3{font-size:var(--text-sm);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:var(--space-5) 0 var(--space-2)}
+.facts{display:grid;grid-template-columns:8rem 1fr;gap:var(--space-1) var(--space-3);margin:0}
+.facts dt{font-weight:700}.facts dd{margin:0}
+.req{display:grid;gap:var(--space-2)}
+.req div{border-radius:var(--space-2);padding:var(--space-2) var(--space-3)}
+.req .have{background:var(--g-bg)}.req .gap{background:var(--r-bg)}
+.req b{font-size:var(--text-xs);margin-right:var(--space-1)}
+.req .have b{color:var(--g)}.req .gap b{color:var(--r)}
+.req .rq{font-weight:500}
+.req small{display:block;color:var(--text);opacity:.85;font-size:var(--text-xs);margin-top:2px}
+ul{margin:0;padding-left:1.2rem}li{margin-bottom:2px}
+.links{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)}
+.links a{font-size:var(--text-sm);font-weight:700;padding:var(--space-2) var(--space-3);border:1px solid var(--primary);border-radius:999px;text-decoration:none}
+.note{font-size:var(--text-xs);color:var(--muted)}
+.empty{padding:var(--space-8);text-align:center;color:var(--muted)}
+footer{margin-top:var(--space-10);font-size:var(--text-xs);color:var(--muted)}
+@media (max-width:30rem){.facts{grid-template-columns:1fr}.facts dt{margin-top:var(--space-2)}}
+@media print{.controls{position:static}.body{display:block!important}.chev{display:none}}
+.tabs{display:flex;gap:var(--space-2);margin-bottom:var(--space-5);border-bottom:1px solid var(--border)}
+.tabs a{padding:var(--space-3) var(--space-4);text-decoration:none;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs a[aria-current=page]{color:var(--primary);border-bottom-color:var(--primary)}
+.ikigai{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:var(--space-3);margin:var(--space-4) 0}
+.ikigai div,.path,.learnbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-4)}
+.ikigai h3{margin:0 0 var(--space-1);font-size:var(--text-sm);color:var(--primary)}.ikigai p{margin:0;font-size:var(--text-sm)}
+.path,.learnbox{margin-bottom:var(--space-4);font-size:var(--text-sm)}.path{border-left:6px solid var(--primary)}
+.path h2,.learnbox h2{font-family:var(--font-display);font-size:var(--text-lg);margin:0 0 var(--space-2)}
+.path ol{padding-left:1.2rem}.path li{margin-bottom:var(--space-2)}
+.req .mid{background:var(--y-bg)}.req .mid b{color:var(--y)}
+.dots{display:flex;align-items:center;gap:4px;margin-top:var(--space-2)}.dots .note{margin-left:var(--space-2)}
+.sdot{width:.85rem;height:.85rem;border-radius:3px}.s-g{background:var(--g)}.s-y{background:#c99a1c}.s-r{background:var(--r)}
+.privnote{background:var(--primary-hl);padding:var(--space-2) var(--space-3);border-radius:var(--space-2)}
+[hidden]{display:none!important}
+.pickers{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:var(--space-3);margin:var(--space-4) 0}
+.pickers label{display:flex;flex-direction:column;gap:4px;font-size:var(--text-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.pickers select{font:inherit;font-size:var(--text-sm);text-transform:none;letter-spacing:0;font-weight:500;color:var(--text);padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);min-height:2.75rem;width:100%}
+.pbtns{display:flex;gap:var(--space-2);align-items:flex-end;flex-wrap:wrap}.pbtns .toggle{white-space:nowrap}
+.summary{display:flex;flex-wrap:wrap;gap:var(--space-3);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3)}
+.summary>div{display:flex;flex-direction:column;min-width:7rem}.summary .k{font-size:var(--text-xs);color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.summary b{font-size:var(--text-base)}.summary small{font-size:var(--text-xs);color:var(--muted)}
+.summary .warn,.summary .okn{flex-basis:100%;margin:0;font-size:var(--text-sm);padding:var(--space-2) var(--space-3);border-radius:var(--space-2)}
+.summary .warn{background:var(--r-bg);color:var(--r)}.summary .okn{background:var(--g-bg);color:var(--g)}
+.mapwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-2)}
+#pmap{display:block;width:100%;min-width:760px;height:auto}
+#pmap .hood{font:700 15px var(--font-display);fill:var(--text)}#pmap .hoodsub{font:500 13px var(--font-body);fill:var(--muted)}
+#pmap .lname{font:700 13px var(--font-body);fill:var(--text)}#pmap .lneed{font:700 12px var(--font-body);fill:var(--muted)}
+#pmap .lane{cursor:pointer;outline:none}#pmap .lane:hover rect,#pmap .lane:focus rect{fill:rgba(31,78,121,.05)}
+.threadinfo{margin:var(--space-3) 0}.threadinfo h3{margin:0 0 var(--space-2);font-size:var(--text-base)}
+.req .off{background:var(--surface-2)}.req .off b{color:var(--muted)}
+.sech{font-family:var(--font-display);font-size:var(--text-lg);margin:var(--space-8) 0 var(--space-3)}
+.timing{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:var(--space-3)}
+.tcol{background:var(--surface);border:1px solid var(--border);border-top:6px solid var(--primary);border-radius:var(--radius);padding:var(--space-3)}
+.tcol.t-now{border-top-color:#5b8fb9}.tcol.t-ba{border-top-color:var(--primary)}.tcol.t-ma{border-top-color:#0f2d47}
+.tcol h3{margin:0 0 var(--space-2);font-size:var(--text-sm)}
+.tcard{all:unset;box-sizing:border-box;display:flex;gap:var(--space-2);align-items:flex-start;width:100%;padding:var(--space-2);border-radius:var(--space-2);cursor:pointer;font-size:var(--text-sm)}
+.tcard:hover,.tcard:focus-visible{background:var(--surface-2)}.tcard.on{background:var(--primary-hl);outline:2px solid var(--primary)}
+.tcard .sdot{flex:0 0 auto;margin-top:4px}.tcard small{display:block;color:var(--muted);font-size:var(--text-xs)}.tcard .sal{color:var(--text);font-weight:700}
+.progs{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:var(--space-3)}
+.pcard{background:var(--surface);border:1px solid var(--border);border-left:6px solid var(--border);border-radius:var(--radius);padding:var(--space-4);font-size:var(--text-sm)}
+.pcard.f-g{border-left-color:var(--g)}.pcard.f-y{border-left-color:#c99a1c}.pcard.f-r{border-left-color:var(--r)}
+.pcard h3{margin:0;font-size:var(--text-base)}.pcard h4{margin:var(--space-3) 0 var(--space-1);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.plab{font-size:var(--text-xs);font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.04em}
+.pcard .req{margin-top:var(--space-3)}.pcard .req ul{margin-top:2px}
+.privbanner{background:var(--primary-hl);border-radius:var(--radius);padding:var(--space-2) var(--space-3);font-size:var(--text-sm);margin-bottom:var(--space-3)}
+</style>
+<style id="pcss2">
+.summary{align-items:stretch}.sfit,.sgroup{display:flex;flex-direction:column;gap:6px}.sfit small{font-size:var(--text-xs);color:var(--muted)}
+.sgroup .gh{font-family:var(--font-display);font-size:var(--text-sm);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.srow{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.money{display:inline-flex;flex-direction:column;gap:1px;border-radius:10px;padding:6px 10px;border:2px solid;line-height:1.15;font-variant-numeric:tabular-nums;min-width:6.5rem}
+.money .ml{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.85}
+.money .mv{font-family:var(--font-display);font-size:1.15rem;font-weight:800}.money .mt{font-size:11px;font-weight:700}
+.money.lab .mv{font-size:1.35rem}
+.money.cost .mv::before{content:"Tuition ";font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;display:none}
+.money.t1{background:#d6ead0;color:#1f5c14;border-color:#2e6b1f}.money.t2{background:#e6efc9;color:#3d5a0c;border-color:#7a9a2a}
+.money.t3{background:#f4e8c8;color:#7a5a00;border-color:#c99a1c}.money.t4{background:#f8dcc4;color:#8a3f08;border-color:#d97a2b}
+.money.t5{background:#f6dcd7;color:#9b2c22;border-color:#b8463a}.money.t0{background:#ecebe7;color:#555;border-color:#b5b2aa}
+.money.pay{border-style:solid;border-radius:999px}.money.cost{border-style:solid}
+.glance{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3)}
+.glance summary{cursor:pointer;font-weight:700;font-size:var(--text-sm)}
+.glance h3{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:var(--space-3) 0 var(--space-2)}
+.glrow{display:flex;gap:var(--space-2);overflow-x:auto;padding-bottom:4px}
+.gl{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:12px;border:2px solid transparent;flex:0 0 auto;font-size:var(--text-xs);max-width:10rem}
+.gl b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gl:hover,.gl:focus-visible{background:var(--surface-2)}.gl.on{border-color:var(--primary);background:var(--primary-hl)}
+.gl .money{min-width:0}.gl .money .mv{font-size:1rem}
+.legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:var(--text-xs);margin-top:var(--space-2)}
+.legend .lg{font-weight:700}.legend .sw{width:22px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
+.legend .sw.t1{background:#2e6b1f}.legend .sw.t2{background:#7a9a2a}.legend .sw.t3{background:#c99a1c}.legend .sw.t4{background:#d97a2b}.legend .sw.t5{background:#b8463a}.legend .lgt{color:var(--muted)}
+.pmoney{margin:var(--space-2) 0}
+.tcol{padding:0;overflow:hidden;border-top:none}
+.thead{display:flex;gap:var(--space-3);align-items:center;padding:var(--space-3) var(--space-4);color:#fff}
+.t-now .thead{background:#3f7cad}.t-ba .thead{background:#1f4e79}.t-ma .thead{background:#0f2d47}
+.tnum{flex:0 0 auto;width:2rem;height:2rem;border-radius:50%;background:#fff;color:#1f4e79;font-weight:800;display:grid;place-items:center;font-family:var(--font-display)}
+.thead .tt{display:block;font-family:var(--font-display);font-size:var(--text-lg);font-weight:800;line-height:1.1}.thead .ts{display:block;font-size:var(--text-xs);opacity:.9}
+.tcol .tcard{margin:0 var(--space-2);width:calc(100% - 2*var(--space-2))}.tcol .tcard:first-of-type{margin-top:var(--space-2)}.tcol .tcard:last-child{margin-bottom:var(--space-2)}
+.tcard .money{margin-top:4px}
+
+.pfilters{border:1px solid var(--line,#d8dee6);border-radius:10px;padding:12px 14px;margin:12px 0;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end}
+.pfilters legend{font-weight:700;padding:0 6px;color:#1f4e79}
+.pfilters label{display:flex;flex-direction:column;font-size:.85rem;gap:4px;min-width:180px}
+.pfilters label.chk{flex-direction:row;align-items:center;min-width:0;gap:6px}
+.pfilters .note{flex-basis:100%;margin:0}
+.pbtns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.toggle.primary{background:#1f4e79;color:#fff;border-color:#1f4e79}
+.toggle.danger{color:#9b2c22;border-color:#e3b3ab}
+ul.blk{list-style:none;padding:0;margin:4px 0 8px}
+ul.blk li{padding:4px 8px;border-radius:6px;margin:3px 0;font-size:.88rem;line-height:1.35}
+ul.blk li.block{background:#f6dcd7;color:#9b2c22}
+ul.blk li.hurdle{background:#f4e8c8;color:#6b4600}
+ul.blk li b{margin-right:4px}
+.evid{font-size:.82rem;font-weight:600;padding:2px 8px;border-radius:6px;display:inline-block;margin:0 0 6px}
+.ev-full{background:#e1eed9;color:#2e6b1f}.ev-sample{background:#f4e8c8;color:#6b4600}.ev-overview{background:#eceff3;color:#4a5562}
+.tag.exp{background:#f6dcd7;color:#9b2c22}
+.bcount{display:block;font-size:.78rem;color:#6b4600;margin-top:4px}
+ul.why,ul.gaps{padding-left:0;list-style:none;margin:4px 0}
+ul.why li,ul.gaps li{padding:2px 0 2px 14px;position:relative;font-size:.88rem}
+ul.why li:before,ul.gaps li:before{content:"";position:absolute;left:0;top:.55em;width:8px;height:8px;border-radius:50%}
+li.d-g:before{background:#2e6b1f}li.d-y:before{background:#c99a1c}li.d-r:before{background:#9b2c22}
+.empty{color:#5b6672;font-style:normal;padding:8px}
+.svlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin:12px 0}
+.svcard{border:1px solid #d8dee6;border-top:6px solid #aab;border-radius:10px;padding:12px;background:#fff;display:flex;flex-direction:column}
+.svcard.f-g{border-top-color:#2e6b1f}.svcard.f-y{border-top-color:#c99a1c}.svcard.f-r{border-top-color:#9b2c22}
+.svname input{width:100%;font-weight:700;font-size:1rem;border:1px solid transparent;border-radius:6px;padding:4px 6px;box-sizing:border-box}
+.svname input:hover,.svname input:focus{border-color:#c5ccd5}
+.svcard dl{margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;flex:1}
+.svcard dl>div{min-width:0}.svcard dl>div.wide{grid-column:1/-1}
+.svcard dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#5b6672;font-weight:700}
+.svcard dd{margin:2px 0 0;font-size:.9rem}
+.svcard dd small{display:block;color:#5b6672}
+.svcard textarea{width:100%;box-sizing:border-box;font:inherit;font-size:.88rem}
+.svcard .cnt{text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px}
+.best{display:inline-block;margin-left:6px;background:#1f4e79;color:#fff;border-radius:10px;padding:1px 8px;font-size:.72rem;font-weight:700;vertical-align:middle}
+.svbtns{display:flex;flex-wrap:wrap;gap:6px}
+.svkeep textarea{width:100%;box-sizing:border-box;font-family:monospace;font-size:.78rem}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.allprogs{margin:24px 0}
+.allprogs .tablewrap{overflow-x:auto}
+.allprogs table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:760px}
+.allprogs th,.allprogs td{border-bottom:1px solid #e3e7ec;padding:6px 8px;text-align:left;vertical-align:top}
+.allprogs td small{display:block;color:#5b6672}
+.allprogs .bk{display:block;background:#f6dcd7;color:#9b2c22;border-radius:6px;padding:2px 6px;margin:2px 0;font-size:.8rem}
+.allprogs .none{color:#2e6b1f}
+.trc{border:1px solid #d8dee6;border-left:6px solid #1f4e79;border-radius:10px;padding:10px 14px;margin:10px 0;background:#f7f9fb}
+.trc ul{margin:4px 0;padding-left:18px}
+nav.tabs{flex-wrap:wrap;row-gap:4px}
+.money.pay .mv{white-space:nowrap}.money{max-width:100%;box-sizing:border-box}
+.pickers{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px}.pickers>label:nth-of-type(3){grid-column:1/-1}.pickers select{width:100%}@media(max-width:640px){.pickers{grid-template-columns:1fr!important}}.pfilters select{min-width:250px;max-width:100%}
+.pfull{text-transform:none;letter-spacing:0;font-weight:500;font-size:.85rem;color:#3b4652}
+/* v7: use more width on big screens; three pickers in a row when there is room */
+@media(min-width:1280px){.wrap{max-width:min(94vw,88rem)}}
+@media(min-width:1100px){.pickers{grid-template-columns:1fr 1fr 1.4fr!important}.pickers>label:nth-of-type(3){grid-column:auto}}
+
+/* v7: active preset button, saved-path picker and compare */
+.pbtns button.on{background:#dbe7f3;border-color:#1f4e79;color:#1f4e79;font-weight:700;box-shadow:inset 0 0 0 1px #1f4e79}
+.pbtns button.on::before{content:"Showing: ";font-weight:400}
+.svtools{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}.svtools label{display:flex;flex-direction:column;gap:4px;font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.svtools select{min-width:260px;max-width:100%;padding:6px;font-size:var(--text-sm);text-transform:none;letter-spacing:0;font-weight:400;color:inherit}
+.cmpt{width:100%;border-collapse:collapse}.cmpt th,.cmpt td{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}.cmpt thead th{color:#1f4e79}.cmpt tbody th{width:12rem;font-size:var(--text-sm)}.cmpt td small{display:block;color:var(--muted)}
+.cmpt td.cw{background:#e1eed9;color:#2e6b1f;font-weight:700}.cmpt td .d-y{color:#6b4600}.cmpt td .d-r{color:#9b2c22}
+@media(max-width:640px){.svtools select{min-width:0;width:100%}.svtools label{flex:1 1 100%}.cmpt tbody th{width:auto}}
+</style></head>
+<body>
+<div class="wrap">
+<nav class="tabs" aria-label="Sections"><a href="#paths">Pathways</a><a href="#schools">Schools</a><a href="#roles">Roles</a><a href="#saved">Saved paths</a></nav>
+<section id="roles-view">
+<header>
+  <h1>Role Explorer</h1>
+  <p>23 roles, fellowships and volunteer paths that match your values (disinformation, poverty and tax policy, local government, public health), checked November 2, 2026. Tap a card for full saved details. The five starred cards are the counselor shortlist, with green "have" and red "need" qualifications.</p>
+  <p><a href="Job_Ad_Shortlist_Chris_Fortier.pdf">Counselor shortlist (PDF)</a> &nbsp;|&nbsp; <a href="Job_Ad_Shortlist_Chris_Fortier.docx">Editable Word version</a></p>
+  <div class="legend" aria-label="Fit legend">
+    <span class="pill fit-green"><span class="dot"></span>Strong fit</span>
+    <span class="pill fit-yellow"><span class="dot"></span>Possible, some gaps</span>
+    <span class="pill fit-red"><span class="dot"></span>Stretch or poor fit now</span>
+  </div>
+</header>
+<div class="controls">
+  <input class="search" id="q" type="search" placeholder="Search roles, orgs, skills" aria-label="Search">
+  <div class="filters">
+    <button class="toggle" id="star" aria-pressed="false">Shortlist only</button>
+    <select id="fit" aria-label="Fit"><option value="">Any fit</option><option value="green">Strong fit</option><option value="yellow">Possible</option><option value="red">Stretch</option></select>
+    <select id="lane" aria-label="Lane"><option value="">All lanes</option></select>
+    <select id="pay" aria-label="Pay type"><option value="">Any pay type</option><option value="fulltime">Paid full-time</option><option value="parttime">Part-time / fellowship</option><option value="freelance">Freelance / contract</option><option value="volunteer">Volunteer</option></select>
+    <select id="loc" aria-label="Location"><option value="">Any location</option><option value="remote">Remote</option><option value="local">New Hampshire local</option><option value="hybrid">Hybrid / onsite</option></select>
+  </div>
+  <div class="count" id="count" aria-live="polite"></div>
+</div>
+<main class="list" id="list"></main>
+<footer>Pay and status are as posted on November 2, 2026. Postings change, so confirm on the original ad before applying. Where the archive service was unavailable, the saved details in each card preserve the posting text.</footer>
+</section>
+<section id="paths-view" hidden>
+<header>
+  <h1>Pathways Map</h1>
+  <p>Each colored line is one skill thread running from you today, through a bachelor's and a master's, to a role. Line color shows fit: <b style="color:var(--g)">green</b> is strong, <b style="color:#a07a10">yellow</b> is workable with effort, <b style="color:var(--r)">red</b> means the role needs a skill your plan doesn't teach, and gray dashes mean the program doesn't cover that thread. Swap any piece to compare plans.</p>
+</header>
+<div class="pickers">
+  <label>Bachelor's<select id="pba"></select></label>
+  <label>Master's<select id="pma"></select></label>
+  <label>Role<select id="prole"></select><span class="pfull" id="prolefull"></span></label>
+</div>
+<fieldset class="pfilters"><legend>Filters</legend>
+  <label>Location<select id="floc"><option value="any">Any, including moving</option><option value="near" selected>Online or commutable from Dublin</option><option value="online">Online only</option></select></label>
+  <label>Max total tuition<select id="fmax"><option value="0">Any</option><option value="25000">$25K</option><option value="50000">$50K</option><option value="75000">$75K</option><option value="100000">$100K</option></select></label>
+  <label>Role values<select id="fval"><option value="">Any</option><option value="public">Public-facing</option><option value="research">Research</option><option value="community">Community service</option><option value="worker">Pro-worker and rural</option><option value="nh">New Hampshire</option></select></label>
+  <label class="chk"><input type="checkbox" id="freimb" checked> Count my employer tuition reimbursement ($5,250/yr)</label>
+  <label class="chk"><input type="checkbox" id="fblk" checked> Hide anything with a blocker</label>
+  <label class="chk"><input type="checkbox" id="fexp" checked> Hide expired postings</label>
+  <label class="chk"><input type="checkbox" id="fstrong"> Strong-fit roles only</label>
+  <p class="note" id="pfcount" aria-live="polite"></p>
+</fieldset>
+<div class="pbtns"><button class="toggle" id="preset">Recommended for my filters</button><button class="toggle" id="pbest">Best plan for this role</button><button class="toggle" id="pchosen">My chosen plan (UWW + UT)</button><button class="toggle primary" id="psave">Save this path</button></div>
+<p class="note" id="precmsg" aria-live="polite"></p><p class="note" id="psavemsg" aria-live="polite"></p>
+<div id="ptranscript"></div>
+<div class="summary" id="psum"></div>
+<details class="glance" open><summary>Compare tuition and pay at a glance</summary><div id="pglance"></div></details>
+<div class="mapwrap"><svg id="pmap" viewBox="0 0 1000 470" role="img" aria-label="Pathways map"></svg></div>
+<p class="note">Tap a line to see what each program teaches for that thread. On a phone, scroll the map sideways.</p>
+<div class="threadinfo" id="pthread"></div>
+<h2 class="sech">When you could do each role</h2>
+<div class="timing" id="ptiming"></div>
+<h2 class="sech">What's in the programs and role you picked</h2>
+<div class="progs" id="pprogs"></div>
+<div class="learnbox">
+  <h2>What to look for</h2>
+  <ul>
+    <li>Applied, project-based courses on topics you care about.</li>
+    <li>Discussion, interviews and writing rather than timed, rote tests.</li>
+    <li>Clear weekly deadlines and written rubrics.</li>
+    <li>One or two courses at a time alongside full-time work.</li>
+    <li>Peers to share projects with and learn from.</li>
+  </ul>
+</div>
+
+<footer>Costs are tuition estimates for your remaining credits. With the reimbursement box checked, they subtract employer reimbursement of $5,250 a year (C or better in each class); full-time and relocation programs (Buffalo, Northeastern J+DS) get none, since full-time day classes mean leaving your job. Your remote job travels with you for temporary stays elsewhere, checked November 19, 2026. Salaries come from postings saved November 2, 2026, or from BLS national medians where marked. Years assume part-time study and are estimates.</footer>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<section id="saved-view" hidden>
+<header>
+  <h1>Saved paths</h1>
+  <p>Compare saved combinations side by side. Every card lists the same rows in the same order, so you can read across. <b style="color:var(--r)">Red</b> items are blockers that stop a path as it stands. <b style="color:#8a5b00">Yellow</b> items are hurdles you can work through. Badges mark the best path in each category.</p>
+</header>
+<p class="note"><span id="svcount"></span> Four starting paths are preloaded. Add more with Save this path on the Pathways tab.</p>
+<div class="svtools"><label>Show<select id="svshow"></select></label></div>
+<div class="svtools" id="svcmpbar" hidden><label>Path A<select id="svA"></select></label><label>Path B<select id="svB"></select></label></div>
+<div id="svcmp" hidden></div>
+<div class="svlist" id="svlist"></div>
+<details class="svkeep" open><summary>Keep your saves</summary>
+  <p class="note">Saves last only while this page is open, because this page can't store data in your browser. To keep them, copy this code and paste it into a note. Next time, paste it back here and press Load. You can also send me the code and I'll build those paths into the site.</p>
+  <label class="vh" for="svcode">Save code</label><textarea id="svcode" rows="3" spellcheck="false"></textarea>
+  <div class="pbtns"><button class="toggle" id="svcopy">Copy code</button><button class="toggle" id="svload">Load pasted code</button></div>
+  <p class="note" id="svmsg" aria-live="polite"></p>
+</details>
+<footer>Fit, tuition and pay come from the same data as the Pathways tab, checked November 19, 2026.</footer>
+</section>
+
+
+
+
+
+
+<section id="schools-view" hidden>
+<header>
+  <h1>School and Program Finder</h1>
+  <p>Transfer options from SNHU for a bachelor's in disinformation, journalism, policy and technology, without moving away from the Keene area. Checked November 19, 2026. Each card rates eight factors: green means a good fit, yellow means workable with tradeoffs, red means a problem.</p>
+  <div class="legend" aria-label="Fit legend">
+    <span class="pill fit-green"><span class="dot"></span>Good fit</span>
+    <span class="pill fit-yellow"><span class="dot"></span>Tradeoffs</span>
+    <span class="pill fit-red"><span class="dot"></span>Problem</span>
+  </div>
+</header>
+<div class="ikigai">
+  <div><h3>What you love</h3><p>Disinformation and influence operations, journalism, local policy, ethics, history, language, AI and tools.</p></div>
+  <div><h3>What you are good at</h3><p>Research, interviewing, writing and conversation, and turning data into visuals for different audiences. Fifteen years of explaining technical products.</p></div>
+  <div><h3>What the world needs</h3><p>People who catch manipulative narratives as they spread, especially in local news and for working people.</p></div>
+  <div><h3>What can pay</h3><p>OSINT and research analyst, trust and safety, data journalism and civic tech roles (see the Roles tab; target $70K+).</p></div>
+</div>
+<div class="path">
+  <h2>Recommended path</h2>
+  <p><b>Main route:</b> transfer to UMass Amherst University Without Walls and design a concentration in Information Integrity and Democratic Communication. Add one in-person course a year for community: UMass PUBPOL/COMM 208 in Amherst, or a Keene State journalism, persuasion or genocide-studies course taken as transfer credit (get it approved first).</p>
+  <ol>
+    <li><b>Now:</b> request your SNHU transcript, book a UWW pre-admission advising call, and ask HR about your tuition reimbursement cap and approved schools.</li>
+    <li><b>First term:</b> UWW 305 (degree plan with your faculty advisor) plus one Experiential Reflections course (Technology runs in fall, Public Policy in spring).</li>
+    <li><b>Second term:</b> UWW 370, where you write the portfolio that can earn credit for 15 years of technical sales and project work.</li>
+    <li><b>Every term after:</b> one or two concentration courses. Use DisinfoVault or your NH policy work as an independent study or practicum.</li>
+    <li><b>After the BA:</b> the UT Information Security and Integrity MS remains a fit (any major, 2.7 GPA).</li>
+  </ol>
+  <p><b>Plan B:</b> if in-person community matters more than flexibility, matriculate part-time at Keene State in Multimedia Journalism or Social Media with a Holocaust and Genocide Studies minor.</p>
+</div>
+<div class="learnbox">
+  <h2>What to look for</h2>
+  <ul>
+    <li>Applied, project-based courses on topics you care about.</li>
+    <li>Discussion, interviews and writing rather than timed, rote tests.</li>
+    <li>Clear weekly deadlines and written rubrics.</li>
+    <li>One or two courses at a time alongside full-time work.</li>
+    <li>Peers to share projects with and learn from.</li>
+  </ul>
+</div>
+
+<div class="controls">
+  <div class="filters">
+    <select id="sfit" aria-label="Overall fit"><option value="">Any fit</option><option value="green">Good fit</option><option value="yellow">Tradeoffs</option><option value="red">Problem</option></select>
+    <select id="sfmt" aria-label="Format"><option value="">Any format</option><option value="online">Online</option><option value="person">In person</option></select>
+  </div>
+  <div class="count" id="scount" aria-live="polite"></div>
+</div>
+<main class="list" id="slist"></main>
+<footer>Prices and rules as posted on November 19, 2026. Confirm with each school's advisor before applying.</footer>
+</section>
+
+</div>
+<script src="data.js"></script><script src="schools.js"></script><script src="paths.js"></script>
+<script>
+const R = window.ROLES;
+const PAY = {fulltime:'Paid full-time',parttime:'Part-time / fellowship',freelance:'Freelance / contract',volunteer:'Volunteer'};
+const FIT = {green:'Strong fit',yellow:'Possible',red:'Stretch'};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lanes = [...new Map(R.map(r => [r.lane, r.lane_label])).entries()];
+const laneSel = document.getElementById('lane');
+lanes.forEach(([k,v]) => laneSel.insertAdjacentHTML('beforeend', `<option value="${k}">${esc(v)}</option>`));
+const order = {green:0,yellow:1,red:2};
+R.sort((a,b) => (a.rank||99)-(b.rank||99) || order[a.fit]-order[b.fit]);
+const st = {q:'',star:false,fit:'',lane:'',pay:'',loc:''};
+function shortPay(p){ if(!p) return 'Pay not listed'; return p.split(/;|\. /)[0].replace(/^(US-based staff: |Starting pay range: |Base salary range: |USD |Expected salary range: )/,''); }
+function list(arr){ return arr && arr.length ? '<ul>'+arr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>' : ''; }
+function card(r){
+  const have = r.reqs ? r.reqs.filter(x=>x.st==='have').length : 0, gap = r.reqs ? r.reqs.length-have : 0;
+  const facts = [['Location',[r.location,r.remote_status].filter(Boolean).join('. ')],['Type',[r.employment_type,r.hours].filter(x=>x&&x!=='Not specified').join(' | ')],['Pay',r.pay],['Deadline',r.deadline],['Education',r.education_requirement],['How to apply',r.how_to_apply]].filter(f=>f[1]);
+  return `<article class="card ${r.fit}" id="c-${r.id}">
+  <button aria-expanded="false" aria-controls="b-${r.id}">
+    <div class="top"><div><div class="title">${esc(r.title)}</div><div class="org">${esc(r.org)}</div></div>
+    <svg class="chev" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+    <div class="meta">
+      <span class="pill fit-${r.fit}"><span class="dot"></span>${FIT[r.fit]}</span>
+      ${r.rank?`<span class="tag star">Shortlist #${r.rank}</span>`:''}
+      ${r.urgent?`<span class="tag urgent">Closes ${esc(r.urgent)}</span>`:''}
+      <span class="tag">${PAY[r.paytype]}</span><span class="tag">${esc(r.where)}</span><span class="tag">${esc(r.paylabel)}</span>
+      ${r.reqs?`<span class="tag" style="background:var(--g-bg);color:var(--g);font-weight:700">${have} have</span><span class="tag" style="background:var(--r-bg);color:var(--r);font-weight:700">${gap} need</span>`:''}
+    </div>
+    <p class="why">${esc(r.why)}</p>
+  </button>
+  <div class="body" id="b-${r.id}">
+    <p><b>Watch:</b> ${esc(r.watch)}</p>
+    ${r.reqs?`<h3>Have (green) vs. need (red)</h3><div class="req">${r.reqs.map(x=>`<div class="${x.st}"><b>${x.st==='have'?'HAVE':'NEED'}</b><span class="rq">${esc(x.req)}</span><small>${esc(x.cat)}: ${esc(x.note)}</small></div>`).join('')}</div>`:''}
+    <h3>Saved posting details</h3>
+    <dl class="facts">${facts.map(f=>`<dt>${f[0]}</dt><dd>${esc(f[1])}</dd>`).join('')}</dl>
+    ${r.summary?`<h3>Summary</h3><p>${esc(r.summary)}</p>`:''}
+    ${r.duties&&r.duties.length?`<h3>Duties</h3>${list(r.duties)}`:''}
+    ${r.required_qualifications&&r.required_qualifications.length?`<h3>Required</h3>${list(r.required_qualifications)}`:''}
+    ${r.preferred_qualifications&&r.preferred_qualifications.length?`<h3>Preferred</h3>${list(r.preferred_qualifications)}`:''}
+    <div class="links"><a href="${esc(r.url)}" target="_blank" rel="noopener">Original ad</a>${r.archive?`<a href="${esc(r.archive)}" target="_blank" rel="noopener">Archived copy</a>`:''}${r.saved?`<a href="${esc(r.saved)}" target="_blank" rel="noopener">Saved copy (PDF)</a>`:''}</div>
+    ${r.saved?'<p class="note">Archive services were blocking saves on Nov 2, 2026, so this page was saved as a dated PDF instead.</p>':''}
+  </div></article>`;
+}
+function render(){
+  const q = st.q.toLowerCase();
+  const out = R.filter(r => (!st.star||r.rank) && (!st.fit||r.fit===st.fit) && (!st.lane||r.lane===st.lane) && (!st.pay||r.paytype===st.pay) && (!st.loc||r.loc===st.loc)
+    && (!q || JSON.stringify(r).toLowerCase().includes(q)));
+  document.getElementById('list').innerHTML = out.length ? out.map(card).join('') : '<div class="empty">No roles match these filters.</div>';
+  document.getElementById('count').textContent = `Showing ${out.length} of ${R.length}`;
+}
+document.getElementById('list').addEventListener('click', e => {
+  const b = e.target.closest('.card > button'); if(!b) return;
+  const c = b.parentElement; const o = c.classList.toggle('open'); b.setAttribute('aria-expanded', o);
+});
+document.getElementById('q').addEventListener('input', e => {st.q=e.target.value; render();});
+['fit','lane','pay','loc'].forEach(k => document.getElementById(k).addEventListener('change', e => {st[k]=e.target.value; render();}));
+const sb = document.getElementById('star'); sb.addEventListener('click', () => {st.star=!st.star; sb.setAttribute('aria-pressed', st.star); render();});
+render();
+</script>
+<script>(function(){
+const D = window.SCHOOLS, L = D.labels, U = D.urls;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const C = {g:'have',y:'mid',r:'gap'}, W = {g:'GOOD',y:'TRADEOFF',r:'PROBLEM'}, FIT={green:'Good fit',yellow:'Tradeoffs',red:'Problem'};
+const st = {fit:'',fmt:''};
+function card(s){
+  const keys = Object.keys(L).filter(k=>s.d[k]);
+  const n = t => keys.filter(k=>s.d[k][0]===t).length;
+  const dots = keys.map(k=>`<span class="sdot s-${s.d[k][0]}" title="${esc(L[k])}"></span>`).join('');
+  return `<article class="card ${s.fit}">
+  <button aria-expanded="false">
+    <div class="top"><div><div class="title">${esc(s.name)}</div><div class="org">${esc(s.prog)}</div></div>
+    <svg class="chev" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+    <div class="meta"><span class="pill fit-${s.fit}"><span class="dot"></span>${FIT[s.fit]}</span>
+      ${s.badge?`<span class="tag star">${s.rank?'#'+s.rank+' ':''}${esc(s.badge)}</span>`:''}
+      <span class="tag">${esc(s.format)}</span><span class="tag">${esc(s.where)}</span><span class="tag">${esc(s.price)}</span></div>
+    <div class="dots" aria-label="${n('g')} good, ${n('y')} tradeoffs, ${n('r')} problems">${dots}<span class="note">${n('g')} good, ${n("y")} tradeoff${n("y")===1?"":"s"}, ${n("r")} problem${n("r")===1?"":"s"}</span></div>
+    <p class="why">${esc(s.why)}</p>
+  </button>
+  <div class="body">
+    <div class="req">${keys.map(k=>{const [t,txt,src]=s.d[k];return `<div class="${C[t]}"><b>${W[t]}</b><span class="rq">${esc(L[k])}</span><small>${esc(txt)} ${src.map(u=>`<a href="${esc(U[u])}" target="_blank" rel="noopener">source</a>`).join(' ')}</small></div>`}).join('')}</div>
+    ${s.learnPriv?`<p class="privnote"><b>For your learning profile:</b> ${esc(s.learnPriv)}</p>`:''}
+    <p><b>Watch:</b> ${esc(s.watch)}</p>
+    <div class="links">${s.links.map(([t,u])=>`<a href="${esc(U[u])}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</div>
+  </div></article>`;
+}
+function render(){
+  const out = D.schools.filter(s=>(!st.fit||s.fit===st.fit)&&(!st.fmt||(st.fmt==='online'?/online/i.test(s.format):/person/i.test(s.format))));
+  document.getElementById('slist').innerHTML = out.length?out.map(card).join(''):'<div class="empty">No programs match.</div>';
+  document.getElementById('scount').textContent = `Showing ${out.length} of ${D.schools.length}`;
+}
+document.getElementById('slist').addEventListener('click', e=>{const b=e.target.closest('.card > button'); if(!b) return; const o=b.parentElement.classList.toggle('open'); b.setAttribute('aria-expanded',o);});
+['fit','fmt'].forEach(k=>document.getElementById('s'+k).addEventListener('change',e=>{st[k]=e.target.value;render();}));
+render();
+function route(){const v=({'#schools':'schools','#roles':'roles','#saved':'saved'})[location.hash]||'paths';['paths','schools','roles','saved'].forEach(k=>document.getElementById(k+'-view').hidden=k!==v);
+  document.querySelectorAll('.tabs a').forEach(a=>a.setAttribute('aria-current',a.hash==='#'+v?'page':'false'));}
+addEventListener('hashchange',route);route();
+})();
+</script>
+<script>(function(){
+const P=window.PATHS, U=P.urls, T=P.threads;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COL={g:'#2e6b1f',y:'#c99a1c',r:'#9b2c22',none:'#bdb8ad',carry:'#8f99a3'};
+const V={g:2,y:1,r:0}, worst=(a,b)=>V[a]<=V[b]?a:b, FITW={g:'Strong fit',y:'Workable',r:'Weak fit'};
+const TIM={now:'Now, while in school, or on the side',ba:'After the bachelor\'s',ma:'After the master\'s (or with experience)'};
+const by=(arr,id)=>arr.find(x=>x.id===id);
+const st={...P.default, sel:null};
+const money=n=>n==null?'Not listed':n?'$'+Math.round(n).toLocaleString():'$0';
+const kfmt=n=>n==null?'Not listed':n===0?'$0':'$'+(n>=100000?Math.round(n/1000):(Math.round(n/100)/10))+'K';
+const TIERW={cost:['Lowest cost','Low cost','Mid cost','High cost','Highest cost'],pay:['Highest pay','High pay','Mid pay','Low pay','Lowest pay']};
+function tier(v,vals,higherBetter){ if(v==null||v===0&&higherBetter) return 0;
+  const xs=[...new Set(vals.filter(x=>x!=null&&!(higherBetter&&x===0)))].sort((a,b)=>higherBetter?b-a:a-b);
+  if(xs.length<2) return 1; const i=xs.indexOf(v); return 1+Math.round(i/(xs.length-1)*4); }
+const BAC=()=>P.ba.map(x=>x.cost), MAC=()=>P.ma.filter(x=>x.id!=='none').map(x=>x.cost), SAL=()=>P.roles.map(r=>r.salnum);
+let REIMB=true; function applyCost(){ [...P.ba,...P.ma].forEach(p=>{ if('sticker' in p) p.cost=REIMB?p.net:p.sticker; }); TOT=null; }
+let TOT=null; function totals(){ if(!TOT){TOT=[];P.ba.forEach(b=>P.ma.forEach(m=>{if(b.cost!=null&&m.cost!=null)TOT.push(b.cost+m.cost)}));} return TOT; }
+function chip(kind,t,big,small,lab){ return `<span class="money ${kind} t${t}${lab?' lab':''}">${lab?`<span class="ml">${lab}</span>`:''}<span class="mv">${esc(big)}</span>${small?`<span class="mt">${esc(small)}</span>`:''}</span>`; }
+const costChip=(p,lab)=>{ if(p.id==='none') return chip('cost',1,'$0','No master\'s',lab); const t=tier(p.cost,p.deg&&P.ba.includes(p)?BAC():MAC(),false); return chip('cost',t,kfmt(p.cost),t?TIERW.cost[t-1]:'Ask the school',lab); };
+const payChip=(r,lab)=>{ const t=tier(r.salnum,SAL(),true); return chip('pay',t,String(r.sal||'').replace(/\$(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)K/g,'$$$1K–$$$2K'),t?TIERW.pay[t-1]:(/hr/.test(r.sal)?'Hourly':'Varies'),lab); };
+const WG={online:'Online',commute:'In person, within commuting range',move:'In person, would need a temporary stay or move'};
+function evalPlan(ba,ma,role){
+  let num=0,den=0; const seg={};
+  T.forEach(t=>{
+    const b=ba.th[t.id], m=ma.th[t.id], need=role.need[t.id];
+    const s1=b.cov?worst(t.you,b.fit):'none';
+    const s2=m.cov?worst(t.you,m.fit):(b.cov?'carry':'none');
+    let s3=null;
+    if(need){
+      if(role.timing==='now'||t.id==='ops') s3=t.you; /* ops is built from work experience, not coursework */
+      else { const best=Math.max(b.cov, role.timing==='ba'?b.cov:Math.max(b.cov,m.cov));
+        const src=(m.cov>b.cov&&role.timing!=='ba')?m:b;
+        s3= best>=2?worst(t.you,src.fit||'y'): best===1?worst(t.you,'y'):'r'; }
+      const w=need==='core'?2:1; num+=w*V[s3]; den+=w*2;
+    }
+    seg[t.id]={s1,s2,s3,need};
+  });
+  const pct=den?num/den:0; const fit=pct>=.65?'g':pct>=.4?'y':'r';
+  return {seg,pct,fit};
+}
+const FITTAG={g:'Strong fit',y:'Workable',r:'Weak fit'};
+const VALW={public:'Public-facing',research:'Research',community:'Community service',worker:'Pro-worker & rural',nh:'New Hampshire'};
+const EVW={full:'Full course list with course codes',sample:'Sample courses only',overview:'Program overview only',none:''};
+const F={loc:'near',max:0,hideBlk:true,vals:'',hideExp:true,strong:false};
+const NOW=new Date();
+const expired=r=>!!(r.deadline&&new Date(r.deadline+'T23:59:59')<NOW);
+const dfmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const hasBlock=p=>(p.blk||[]).some(x=>x.k==='block');
+function progOK(p){ if(p.id==='none') return true;
+  if(F.loc==='online'&&p.where!=='online') return false;
+  if(F.loc==='near'&&p.where==='move') return false;
+  if(F.hideBlk&&hasBlock(p)) return false;
+  if(F.max&&(p.cost==null||p.cost>F.max)) return false; return true; }
+function roleOK(r,ba,ma){ if(F.vals&&!(r.vals||[]).includes(F.vals)) return false;
+  if(F.hideExp&&expired(r)) return false;
+  if(F.hideBlk&&hasBlock(r)) return false;
+  if(F.strong&&ba&&ma&&evalPlan(ba,ma,r).fit!=='g') return false; return true; }
+function pscore(p){ if(p.id==='none') return -1; let c=0; T.forEach(t=>{const x=p.th[t.id]; if(x&&x.cov) c+=x.cov*(1+V[worst(t.you,x.fit||'y')]);}); return V[p.fit]*1000+c; }
+const pcmp=(a,b)=>(b.id==='none')-(a.id==='none')||pscore(b)-pscore(a)||((a.cost??5e5)-(b.cost??5e5));
+function recommend(){
+  const bas=P.ba.filter(progOK), mas=P.ma.filter(progOK);
+  const rs=P.roles.filter(r=>r.timing!=='now'&&roleOK(r));
+  let best=null;
+  bas.forEach(b=>mas.forEach(m=>{ const tot=(b.cost??5e5)+(m.cost??5e5); if(F.max&&tot>F.max) return;
+    let g=0,sum=0; rs.forEach(r=>{const e=evalPlan(b,m,r); sum+=e.pct; if(e.fit==='g') g++;});
+    const c={b,m,g,avg:rs.length?sum/rs.length:0,tot};
+    if(!best||c.g>best.g||(c.g===best.g&&(c.avg>best.avg+1e-9||(Math.abs(c.avg-best.avg)<1e-9&&c.tot<best.tot)))) best=c; }));
+  if(!best) return null;
+  const role=rs.map(r=>({r,e:evalPlan(best.b,best.m,r)})).sort((x,y)=>((y.r.salnum||0)>=70000)-((x.r.salnum||0)>=70000)||y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0))[0];
+  return {ba:best.b.id,ma:best.m.id,role:role?role.r.id:P.default.role,g:best.g,n:rs.length};
+}
+function fill(){
+  const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma);
+  const opt=x=>`<option value="${x.id}">${x.id==='none'?'':FITTAG[x.fit]+' · '}${esc(x.short)} (${x.id==='none'?'$0':kfmt(x.cost)})${hasBlock(x)?' · has a blocker':''}</option>`;
+  const o=(arr,cur)=>{ const ok=arr.filter(progOK); let h=['online','commute','move'].map(w=>{const xs=ok.filter(x=>(x.where||'online')===w).sort(pcmp);return xs.length?`<optgroup label="${WG[w]} (best fit first)">${xs.map(opt).join('')}</optgroup>`:''}).join('');
+    if(!ok.some(x=>x.id===cur)) h=`<optgroup label="Your current pick (outside your filters)">${opt(by(arr,cur))}</optgroup>`+h; return [h,ok.length]; };
+  const [hb,nb]=o(P.ba,st.ba), [hm,nm]=o(P.ma,st.ma);
+  document.getElementById('pba').innerHTML=hb; document.getElementById('pma').innerHTML=hm;
+  let nr=0;
+  let hr=['now','ba','ma'].map(k=>{const rs=P.roles.filter(r=>r.timing===k&&roleOK(r,ba,ma)).map(r=>({r,e:evalPlan(ba,ma,r)})).sort((x,y)=>y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0)); nr+=rs.length;
+    return rs.length?`<optgroup label="${esc(TIM[k])} (best fit for this plan first)">${rs.map(({r,e})=>`<option value="${r.id}">${FITTAG[e.fit]} · ${esc(r.org)}: ${esc(r.title)}</option>`).join('')}</optgroup>`:''}).join('');
+  const cr=by(P.roles,st.role); if(!roleOK(cr,ba,ma)) hr=`<optgroup label="Your current pick (outside your filters)"><option value="${cr.id}">${esc(cr.title)} (${esc(cr.org)})${expired(cr)?' · expired':''}</option></optgroup>`+hr;
+  document.getElementById('prole').innerHTML=hr;
+  document.getElementById('pfcount').textContent=`Showing ${nb} of ${P.ba.length} bachelor's, ${nm-1} of ${P.ma.length-1} master's and ${nr} of ${P.roles.length} roles.`;
+}
+function drawMap(ba,ma,role,ev){
+  const X=[95,360,620,860], top=92, lane=60, H=top+T.length*lane+10;
+  const svg=document.getElementById('pmap'); svg.setAttribute('viewBox',`0 0 1000 ${H}`);
+  const hoods=[['You now','Skills today'],["Bachelor's",ba.short],["Master's",ma.short],['Role',role.title]];
+  let h='';
+  hoods.forEach(([a,b],i)=>{const w=i===0?150:200,x=X[i]-w/2; h+=`<rect x="${x}" y="8" width="${w}" height="${H-14}" rx="14" fill="${i%2?'#efede8':'#f3f1ec'}" stroke="#d9d6cf"/>
+   <text x="${X[i]}" y="32" text-anchor="middle" class="hood">${esc(a)}</text><text x="${X[i]}" y="52" text-anchor="middle" class="hoodsub">${esc(b.length>30?b.slice(0,29)+'…':b)}</text>`;});
+  T.forEach((t,i)=>{
+    const y=top+i*lane+lane/2, s=ev.seg[t.id], b=ba.th[t.id], m=ma.th[t.id], sel=st.sel===t.id;
+    const line=(x1,x2,c,dash,w)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${COL[c]}" stroke-width="${w}" stroke-linecap="round" ${dash?'stroke-dasharray="2 9"':''}/>`;
+    h+=`<g class="lane${sel?' sel':''}" data-t="${t.id}" tabindex="0" role="button" aria-label="${esc(t.name)} thread">`;
+    h+=`<rect x="0" y="${y-lane/2+2}" width="1000" height="${lane-4}" fill="${sel?'rgba(31,78,121,.07)':'transparent'}"/>`;
+    h+=line(X[0],X[1],s.s1,s.s1==='none',s.s1==='none'?4:9);
+    h+=line(X[1],X[2],s.s2,s.s2==='none',s.s2==='none'?4:(s.s2==='carry'?5:9));
+    if(s.need) h+=line(X[2],X[3],s.s3,false,s.need==='core'?9:5);
+    else h+=line(X[2],X[2]+60,'none',true,3);
+    const stn=(x,cov,c)=>cov?`<circle cx="${x}" cy="${y}" r="${7+cov*2.5}" fill="#fff" stroke="${COL[c]}" stroke-width="4"/>`:`<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#bdb8ad" stroke-width="2"/>`;
+    h+=`<circle cx="${X[0]}" cy="${y}" r="10" fill="${COL[t.you]}"/>`;
+    h+=stn(X[1],b.cov,s.s1); h+=stn(X[2],m.cov,s.s2==='carry'?'carry':s.s2);
+    if(s.need) h+=`<circle cx="${X[3]}" cy="${y}" r="${s.need==='core'?14:9}" fill="${s.need==='core'?COL[s.s3]:'#fff'}" stroke="${COL[s.s3]}" stroke-width="4"/>`;
+    h+=`<text x="${X[0]-62}" y="${y-16}" class="lname">${esc(t.name)}</text>`;
+    if(s.need) h+=`<text x="${X[3]+22}" y="${y+5}" class="lneed">${s.need==='core'?'core':'helps'}</text>`;
+    h+=`</g>`;
+  });
+  svg.innerHTML=h;
+}
+function threadInfo(ba,ma,role,ev){
+  const el=document.getElementById('pthread');
+  if(!st.sel){el.innerHTML='';return;}
+  const t=by(T,st.sel), s=ev.seg[t.id], b=ba.th[t.id], m=ma.th[t.id];
+  const row=(lab,c,txt)=>`<div class="${c==='g'?'have':c==='r'?'gap':c==='y'?'mid':'off'}"><b>${lab}</b><span class="rq">${esc(txt||'Not covered')}</span></div>`;
+  el.innerHTML=`<h3>${esc(t.name)}</h3><div class="req">
+   ${row('YOU NOW',t.you,t.why)}
+   ${row(ba.short.toUpperCase(),b.cov?s.s1:'',b.c)}
+   ${ma.id==='none'?'':row(ma.short.toUpperCase(),m.cov?s.s2:'',m.c)}
+   ${row('ROLE',s.need?s.s3:'',s.need?(s.need==='core'?'This role relies on this thread.':'This thread helps for this role.'):'Not needed for this role.')}</div>`;
+}
+function summary(ba,ma,role,ev){
+  const tot=(ba.cost==null||ma.cost==null)?null:ba.cost+ma.cost, yrs=ba.years+ma.years;
+  const tt=tier(tot,totals(),false);
+  const needMa=role.timing==='ma'&&ma.id==='none';
+  document.getElementById('psum').innerHTML=`
+   <div class="sfit"><span class="k">Plan fit</span><span class="pill fit-${ev.fit==='g'?'green':ev.fit==='y'?'yellow':'red'}"><span class="dot"></span>${FITW[ev.fit]} (${Math.round(ev.pct*100)}%)</span><small>about ${yrs} years of school</small></div>
+   <div class="sgroup"><span class="gh">${REIMB?'Your cost after reimbursement':'Tuition'}</span><div class="srow">${costChip(ba,"Bachelor's")}${costChip(ma,"Master's")}${chip('cost',tt,tot==null?'Incomplete':kfmt(tot),tt?TIERW.cost[tt-1]+' plan':'One cost is unlisted','Total')}</div></div>
+   <div class="sgroup"><span class="gh">Salary</span><div class="srow">${payChip(role,'Role pay')}</div></div>
+   ${needMa?'<p class="warn">This role usually expects a master\'s or several years of experience.</p>':''}
+   ${role.timing==='now'?'<p class="okn">You can start this one now. The line color reflects the skills you already have.</p>':''}`;
+}
+function glance(){
+  const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma);
+  const row=(arr,k)=>arr.filter(progOK).sort((a,b)=>(a.cost??1e9)-(b.cost??1e9)).map(p=>`<button class="gl${st[k]===p.id?' on':''}" data-k="${k}" data-v="${p.id}"><b>${esc(p.short)}</b>${costChip(p)}</button>`).join('');
+  const roles=P.roles.filter(r=>roleOK(r,ba,ma)).sort((a,b)=>(b.salnum||-1)-(a.salnum||-1)).map(r=>`<button class="gl${st.role===r.id?' on':''}" data-k="role" data-v="${r.id}"><b>${esc(r.org)}</b>${payChip(r)}</button>`).join('');
+  document.getElementById('pglance').innerHTML=`
+   <div class="legend"><span class="lg">Color scale</span><span class="sw t1"></span><span class="sw t2"></span><span class="sw t3"></span><span class="sw t4"></span><span class="sw t5"></span><span class="lgt">Green: lowest tuition or highest pay. Red: highest tuition or lowest pay. Gray: not listed or hourly. Only items that pass your filters are shown.</span></div>
+   <h3>Bachelor's tuition, lowest to highest</h3><div class="glrow">${row(P.ba,'ba')}</div>
+   <h3>Master's tuition, lowest to highest</h3><div class="glrow">${row(P.ma,'ma')}</div>
+   <h3>Role pay, highest to lowest</h3><div class="glrow">${roles}</div>`;
+}
+function timing(ba,ma){
+  const TH={now:['1','Now','With the skills and experience you have today'],ba:['2','After bachelor\'s','Entry and mid-level roles'],ma:['3','After master\'s','Or with several years of experience']};
+  document.getElementById('ptiming').innerHTML=['now','ba','ma'].map(k=>{const rs=P.roles.filter(r=>r.timing===k&&roleOK(r,ba,ma)).map(r=>({r,e:evalPlan(ba,ma,r)})).sort((x,y)=>y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0));
+   return `<div class="tcol t-${k}"><div class="thead"><span class="tnum">${TH[k][0]}</span><span><span class="tt">${TH[k][1]}</span><span class="ts">${TH[k][2]}</span></span></div>${rs.length?rs.map(({r,e})=>`<button class="tcard${r.id===st.role?' on':''}" data-r="${r.id}"><span class="sdot s-${e.fit}"></span><span><b>${esc(r.title)}</b><small>${esc(r.org)}</small><small>${esc(r.type)}${r.deadline?` · ${expired(r)?'Expired '+dfmt(r.deadline):'Deadline '+dfmt(r.deadline)}`:''}</small>${payChip(r)}${(r.blk||[]).length?`<span class="bcount">${(r.blk||[]).filter(x=>x.k==='block').length?'Blocker':'Hurdle'}: ${esc(r.blk[0].t)}</span>`:''}</span></button>`).join(''):'<p class="empty">No roles here match your filters.</p>'}</div>`}).join('');
+}
+const blkList=(xs)=>xs.length?`<ul class="blk">${xs.map(x=>`<li class="${x.k}"><b>${x.k==='block'?'Blocker':'Hurdle'}</b> ${esc(x.t)}</li>`).join('')}</ul>`:'<p class="note">No blockers or hurdles recorded.</p>';
+function progs(ba,ma){
+  const role=by(P.roles,st.role);
+  const card=(p,lab)=>p.id==='none'?`<article class="pcard"><h3>${lab}: none</h3><p>${esc(p.suited[0])}</p><p class="note">${esc(p.hard[0])}</p></article>`:`<article class="pcard f-${p.fit}"><div class="plab">${lab}</div><h3>${esc(p.name)}</h3><div class="org">${esc(p.deg)}</div>
+   <div class="pmoney">${costChip(p,REIMB?'Your cost after reimbursement':'Tuition (est.)')}</div><div class="meta"><span class="tag">${esc(p.fmt)}</span><span class="tag">${esc(p.whereNote||p.fmt)}</span><span class="tag">${esc(p.yearsNote)}</span></div>
+   <p class="note">${esc(p.costNote)}${p.reimbNote?' '+esc(p.reimbNote):''}${p.sticker!=null&&REIMB&&p.reimb?` Full price: ${kfmt(p.sticker)}.`:''}</p>
+   <h4>Blockers and hurdles</h4>${blkList(p.blk||[])}
+   <h4>What it contains</h4><p class="evid ev-${p.evid}">Evidence: ${esc(EVW[p.evid])}</p><ul>${p.contents.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+   <div class="req"><div class="have"><b>SUITS YOU</b><ul>${p.suited.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+   <div class="gap"><b>CHALLENGES</b><ul>${p.hard.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
+   ${p.hardPriv?`<p class="privnote"><b>For your learning profile:</b> ${esc(p.hardPriv)}</p>`:''}
+   <div class="links">${p.src.map(u=>`<a href="${esc(U[u])}" target="_blank" rel="noopener">Source: ${esc(new URL(U[u]).hostname.replace('www.',''))}</a>`).join('')}</div></article>`;
+  const ev=evalPlan(ba,ma,role);
+  const why=T.filter(t=>role.need[t.id]).map(t=>`<li class="d-${ev.seg[t.id].s3}"><b>${esc(t.name)}</b> (${role.need[t.id]==='core'?'core':'helps'}): ${ev.seg[t.id].s3==='g'?'strong':ev.seg[t.id].s3==='y'?'workable':'gap'}</li>`).join('');
+  const rcard=`<article class="pcard rcard f-${ev.fit}"><div class="plab">Role</div><h3>${esc(role.title)}</h3><div class="org">${esc(role.org)} · ${esc(role.type)}</div>
+   <div class="pmoney">${payChip(role,'Pay')}</div>
+   <div class="meta">${(role.vals||[]).map(v=>`<span class="tag">${esc(VALW[v])}</span>`).join('')}<span class="tag">Page checked ${dfmt(role.checked)}</span>${role.deadline?`<span class="tag${expired(role)?' exp':''}">${expired(role)?'Expired':'Deadline'} ${dfmt(role.deadline)}</span>`:''}</div>
+   ${role.note?`<p class="note">${esc(role.note)}</p>`:''}
+   <h4>Blockers and hurdles</h4>${blkList(role.blk||[])}
+   <h4>Why this fit rating</h4><ul class="why">${why}</ul>
+   <div class="links">${role.url?`<a href="${esc(role.url)}" target="_blank" rel="noopener">Source: ${esc(new URL(role.url).hostname.replace('www.',''))}</a>`:''}</div></article>`;
+  document.getElementById('pprogs').innerHTML=card(ba,"Bachelor's")+card(ma,"Master's")+rcard;
+}
+/* ---- saved paths ---- */
+const SV=[]; let SVN=0;
+function pathFacts(x){
+  const ba=by(P.ba,x.ba), ma=by(P.ma,x.ma), role=by(P.roles,x.role), ev=evalPlan(ba,ma,role);
+  const tot=(ba.cost==null||ma.cost==null)?null:ba.cost+ma.cost;
+  const tag=(src,arr)=>arr.map(b=>({...b,t:src+': '+b.t}));
+  const items=[...tag(ba.short,ba.blk||[]),...tag(ma.short,ma.blk||[]),...tag(role.org,role.blk||[])];
+  if(expired(role)) items.unshift({k:'block',t:role.org+': posting expired '+dfmt(role.deadline)});
+  if(role.timing==='ma'&&ma.id==='none') items.push({k:'hurdle',t:'This role usually expects a master\'s or several years of experience'});
+  if(tot==null) items.push({k:'hurdle',t:'One tuition figure is not published'});
+  const gaps=T.filter(t=>role.need[t.id]&&ev.seg[t.id].s3!=='g').map(t=>({t:t.name,need:role.need[t.id],c:ev.seg[t.id].s3}));
+  const where=[ba,ma].filter(p=>p.id!=='none').map(p=>p.short+': '+(WG[p.where]||p.where)).join('; ');
+  return {ba,ma,role,ev,tot,yrs:ba.years+ma.years,items,gaps,where};
+}
+function addSaved(x,name){ SV.push({id:++SVN,name:name||`${by(P.ba,x.ba).short} + ${by(P.ma,x.ma).short} → ${by(P.roles,x.role).org}`,ba:x.ba,ma:x.ma,role:x.role,note:x.note||''}); }
+function renderSaved(){
+  const el=document.getElementById('svlist'); if(!el) return;
+  document.getElementById('svcount').textContent=SV.length?`${SV.length} saved path${SV.length>1?'s':''}.`:'';
+  if(!SV.length){el.innerHTML='<p class="empty">No saved paths yet. In Pathways, pick a bachelor\'s, master\'s and role, then press Save this path.</p>';document.getElementById('svcode').value='';return;}
+  svPick();
+  const fs=SV.map(pathFacts);
+  const bestFit=Math.max(...fs.map(f=>f.ev.pct)), tots=fs.map(f=>f.tot).filter(v=>v!=null), lowTot=tots.length?Math.min(...tots):null;
+  const pays=fs.map(f=>f.role.salnum).filter(v=>v), hiPay=pays.length?Math.max(...pays):null, fewB=Math.min(...fs.map(f=>f.items.filter(i=>i.k==='block').length));
+  const badge=(on,t)=>on&&SV.length>1?`<span class="best">${t}</span>`:'';
+  el.innerHTML=SV.map((x,i)=>{const f=fs[i]; const nb=f.items.filter(it=>it.k==='block').length, nh=f.items.length-nb;
+   return `<article class="svcard f-${f.ev.fit}" data-id="${x.id}">
+    <label class="svname"><span class="vh">Path name</span><input value="${esc(x.name)}" data-f="name" aria-label="Path name"></label>
+    <dl>
+     <div><dt>Bachelor's</dt><dd>${esc(f.ba.short)}<small>${esc(f.ba.deg)}</small></dd></div>
+     <div><dt>Master's</dt><dd>${esc(f.ma.short)}<small>${esc(f.ma.deg)}</small></dd></div>
+     <div><dt>Role</dt><dd>${esc(f.role.title)}<small>${esc(f.role.org)}</small></dd></div>
+     <div><dt>Plan fit</dt><dd><span class="pill fit-${f.ev.fit==='g'?'green':f.ev.fit==='y'?'yellow':'red'}"><span class="dot"></span>${FITW[f.ev.fit]} (${Math.round(f.ev.pct*100)}%)</span>${badge(f.ev.pct===bestFit,'Best fit')}</dd></div>
+     <div><dt>${REIMB?'Your total cost':'Total tuition'}</dt><dd>${chip('cost',tier(f.tot,totals(),false),f.tot==null?'Incomplete':kfmt(f.tot),'')}${badge(f.tot!=null&&f.tot===lowTot,'Lowest cost')}</dd></div>
+     <div><dt>School time</dt><dd>About ${f.yrs} years</dd></div>
+     <div><dt>Role pay</dt><dd>${payChip(f.role)}${badge(f.role.salnum&&f.role.salnum===hiPay,'Highest pay')}</dd></div>
+     <div><dt>Where</dt><dd><small>${esc(f.where||'No school')}</small></dd></div>
+     <div class="wide"><dt>Blockers and hurdles <span class="cnt">${nb} blocker${nb===1?'':'s'}, ${nh} hurdle${nh===1?'':'s'}</span>${badge(nb===fewB,'Fewest blockers')}</dt><dd>${blkList(f.items)}</dd></div>
+     <div class="wide"><dt>Skill gaps for this role</dt><dd>${f.gaps.length?`<ul class="gaps">${f.gaps.map(g=>`<li class="d-${g.c}">${esc(g.t)} (${g.need==='core'?'core':'helps'}): ${g.c==='y'?'workable':'gap'}</li>`).join('')}</ul>`:'<p class="note">None. Every skill this role needs is strong in this plan.</p>'}</dd></div>
+     <div class="wide"><dt>Course evidence</dt><dd><small>${esc(f.ba.short)}: ${esc(EVW[f.ba.evid]||'')}${f.ma.id!=='none'?`<br>${esc(f.ma.short)}: ${esc(EVW[f.ma.evid]||'')}`:''}</small></dd></div>
+     <div class="wide"><dt>Your notes</dt><dd><textarea data-f="note" rows="3" aria-label="Notes for this path" placeholder="Questions to ask, what you like, what worries you">${esc(x.note)}</textarea></dd></div>
+    </dl>
+    <div class="svbtns"><button class="toggle" data-a="open">Open in Pathways</button><button class="toggle" data-a="left" ${i===0?'disabled':''} aria-label="Move left">Move left</button><button class="toggle danger" data-a="del">Remove</button></div>
+   </article>`}).join('');
+  updCode(); svFilter();
+}
+let SVSHOW='all';
+function svPick(){ const sh=document.getElementById('svshow'), a=document.getElementById('svA'), b=document.getElementById('svB'); if(!sh) return;
+  if(SVSHOW!=='all'&&SVSHOW!=='cmp'&&!SV.some(x=>x.id==SVSHOW)) SVSHOW='all';
+  sh.innerHTML='<option value="all">All saved paths</option>'+(SV.length>1?'<option value="cmp">Compare two side by side</option>':'')+SV.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''); sh.value=SVSHOW;
+  const keep=[a.value,b.value]; const opts=SV.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join(''); a.innerHTML=opts; b.innerHTML=opts;
+  a.value=SV.some(x=>x.id==keep[0])?keep[0]:(SV[0]?SV[0].id:''); b.value=SV.some(x=>x.id==keep[1])&&keep[1]!==a.value?keep[1]:(SV[1]?SV[1].id:''); }
+function svFilter(){ const list=document.getElementById('svlist'), bar=document.getElementById('svcmpbar'), cmp=document.getElementById('svcmp'); if(!list) return;
+  const isC=SVSHOW==='cmp'; bar.hidden=!isC; cmp.hidden=!isC; list.hidden=isC;
+  list.querySelectorAll('.svcard').forEach(c=>c.hidden=!(SVSHOW==='all'||c.dataset.id==SVSHOW));
+  if(isC) svCompare(); }
+function svCompare(){ const A=SV.find(x=>x.id==document.getElementById('svA').value), B=SV.find(x=>x.id==document.getElementById('svB').value), el=document.getElementById('svcmp');
+  if(!A||!B){el.innerHTML='';return;} const a=pathFacts(A), b=pathFacts(B);
+  const nb=f=>f.items.filter(i=>i.k==='block').length, nh=f=>f.items.length-nb(f);
+  const win=(x,y,hi)=>x==null||y==null||x===y?['','']:((hi?x>y:x<y)?['cw','']:['','cw']);
+  const row=(lab,va,vb,w)=>{w=w||['',''];return `<tr><th scope="row">${lab}</th><td class="${w[0]}">${va}</td><td class="${w[1]}">${vb}</td></tr>`;};
+  const gl=f=>f.gaps.length?f.gaps.map(g=>`<span class="d-${g.c}">${esc(g.t)}</span>`).join(', '):'None';
+  el.innerHTML=`<p class="note">Green cells mark the better side of each row.</p><div class="tablewrap"><table class="cmpt"><thead><tr><th></th><th>${esc(A.name)}</th><th>${esc(B.name)}</th></tr></thead><tbody>
+   ${row("Bachelor's",esc(a.ba.short),esc(b.ba.short))}${row("Master's",esc(a.ma.short),esc(b.ma.short))}${row('Role',esc(a.role.title)+'<small>'+esc(a.role.org)+'</small>',esc(b.role.title)+'<small>'+esc(b.role.org)+'</small>')}
+   ${row('Plan fit',FITW[a.ev.fit]+' ('+Math.round(a.ev.pct*100)+'%)',FITW[b.ev.fit]+' ('+Math.round(b.ev.pct*100)+'%)',win(a.ev.pct,b.ev.pct,true))}
+   ${row(REIMB?'Your total cost':'Total tuition',a.tot==null?'Incomplete':kfmt(a.tot),b.tot==null?'Incomplete':kfmt(b.tot),win(a.tot,b.tot,false))}
+   ${row('School time','About '+a.yrs+' years','About '+b.yrs+' years',win(a.yrs,b.yrs,false))}
+   ${row('Role pay',payChip(a.role),payChip(b.role),win(a.role.salnum||null,b.role.salnum||null,true))}
+   ${row('Blockers',nb(a),nb(b),win(nb(a),nb(b),false))}${row('Hurdles',nh(a),nh(b),win(nh(a),nh(b),false))}
+   ${row('Skill gaps',gl(a),gl(b),win(a.gaps.length,b.gaps.length,false))}${row('Where',esc(a.where||'No school'),esc(b.where||'No school'))}
+   ${row('Blocker and hurdle details',blkList(a.items),blkList(b.items))}</tbody></table></div>`; }
+function updCode(){ try{ document.getElementById('svcode').value=btoa(unescape(encodeURIComponent(JSON.stringify(SV.map(x=>[x.name,x.ba,x.ma,x.role,x.note]))))); }catch(e){} }
+function setupSaved(){
+  const el=document.getElementById('svlist'); if(!el) return;
+  document.getElementById('svshow').addEventListener('change',e=>{SVSHOW=e.target.value;svFilter();});
+  ['svA','svB'].forEach(id=>document.getElementById(id).addEventListener('change',svCompare));
+  el.addEventListener('input',e=>{const c=e.target.closest('.svcard'), f=e.target.dataset.f; if(!c||!f) return; const x=SV.find(s=>s.id==c.dataset.id); x[f]=e.target.value; updCode();});
+  el.addEventListener('click',e=>{const b=e.target.closest('button[data-a]'); if(!b) return; const c=b.closest('.svcard'), i=SV.findIndex(s=>s.id==c.dataset.id);
+    if(b.dataset.a==='del') SV.splice(i,1);
+    if(b.dataset.a==='left'&&i>0) SV.splice(i-1,0,SV.splice(i,1)[0]);
+    if(b.dataset.a==='open'){ const x=SV[i]; Object.assign(st,{ba:x.ba,ma:x.ma,role:x.role,sel:null}); location.hash='#paths'; render(); window.scrollTo(0,0); return; }
+    renderSaved();});
+  document.getElementById('svload').addEventListener('click',()=>{const msg=document.getElementById('svmsg');
+    try{ const arr=JSON.parse(decodeURIComponent(escape(atob(document.getElementById('svcode').value.trim()))));
+      let n=0; arr.forEach(([name,ba,ma,role,note])=>{ if(by(P.ba,ba)&&by(P.ma,ma)&&by(P.roles,role)){ if(!SV.some(s=>s.ba===ba&&s.ma===ma&&s.role===role&&s.name===name)){addSaved({ba,ma,role,note},name);n++;} } });
+      msg.textContent=`Loaded ${n} path${n===1?'':'s'}.`; renderSaved(); }catch(err){ msg.textContent='That code could not be read. Copy the whole code and try again.'; } });
+  document.getElementById('svcopy').addEventListener('click',()=>{const t=document.getElementById('svcode'); t.focus(); t.select(); let ok=false; try{ok=document.execCommand('copy');}catch(e){} document.getElementById('svmsg').textContent=ok?'Code copied.':'Code selected. Press Ctrl+C (or Cmd+C) to copy it.';});
+}
+function allPrograms(){
+  const host=document.getElementById('schools-view'); if(!host||document.getElementById('allprogs')) return;
+  const sec=document.createElement('div'); sec.id='allprogs'; sec.className='allprogs';
+  const rows=(arr,lab)=>arr.filter(p=>p.id!=='none').slice().sort(pcmp).map(p=>`<tr><td><a href="${esc(U[p.src[0]]||'#')}" target="_blank" rel="noopener">${esc(p.short)}</a><small>${esc(p.deg)}</small></td><td>${lab}</td><td><span class="pill fit-${p.fit==='g'?'green':p.fit==='y'?'yellow':'red'}"><span class="dot"></span>${FITW[p.fit]}</span></td><td>${costChip(p)}</td><td>${esc(WG[p.where]||'')}</td><td>${(p.blk||[]).filter(b=>b.k==='block').map(b=>`<span class="bk">${esc(b.t)}</span>`).join('')||'<span class="none">None</span>'}</td><td><small>${esc(EVW[p.evid])}</small></td></tr>`).join('');
+  sec.innerHTML=`<h2>Every program in Pathways</h2><p class="note">The cards above are the five schools reviewed in depth. This table lists every program in the Pathways map from the same data, best fit first. Costs are tuition estimates for your remaining credits.</p>
+   <div class="tablewrap"><table><thead><tr><th>Program</th><th>Level</th><th>Fit</th><th>Tuition</th><th>Where</th><th>Blockers</th><th>Course evidence</th></tr></thead><tbody>${rows(P.ba,"Bachelor's")}${rows(P.ma,"Master's")}</tbody></table></div>`;
+  const foot=host.querySelector('footer'); foot?host.insertBefore(sec,foot):host.appendChild(sec);
+}
+let ACT=null; function markAct(id){ ACT={id,ba:st.ba,ma:st.ma,role:st.role}; }
+function showAct(){ ['preset','pbest','pchosen'].forEach(id=>{const b=document.getElementById(id); if(!b) return; const on=!!ACT&&ACT.id===id&&ACT.ba===st.ba&&ACT.ma===st.ma&&ACT.role===st.role; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on);}); }
+function render(){
+  const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma), role=by(P.roles,st.role), ev=evalPlan(ba,ma,role);
+  fill(); ['ba','ma','role'].forEach(k=>document.getElementById('p'+k).value=st[k]); document.getElementById('prolefull').textContent=`Selected: ${role.title}, ${role.org}`;
+  drawMap(ba,ma,role,ev); threadInfo(ba,ma,role,ev); summary(ba,ma,role,ev); glance(); timing(ba,ma); progs(ba,ma); showAct();
+}
+function applyRec(){ const r=recommend(); const m=document.getElementById('precmsg');
+  if(!r){ m.textContent='No plan passes all your filters. Loosen one to see a recommendation.'; return false; }
+  Object.assign(st,{ba:r.ba,ma:r.ma,role:r.role,sel:null});
+  m.textContent=`Recommended for your filters: ${by(P.ba,r.ba).short} + ${by(P.ma,r.ma).short}. It makes you a strong fit for ${r.g} of the ${r.n} later-stage roles that pass your filters. The role shown is the best fit paying $70K or more.`; return true; }
+['ba','ma','role'].forEach(k=>document.getElementById('p'+k).addEventListener('change',e=>{st[k]=e.target.value;render();}));
+const FI={floc:'loc',fmax:'max',fblk:'hideBlk',fval:'vals',fexp:'hideExp',fstrong:'strong'};
+document.getElementById('freimb').addEventListener('change',e=>{REIMB=e.target.checked;applyCost();render();renderSaved();const ap=document.getElementById('allprogs');if(ap){ap.remove();allPrograms();}});
+Object.entries(FI).forEach(([id,k])=>{const el=document.getElementById(id); el.addEventListener('change',()=>{F[k]=el.type==='checkbox'?el.checked:(k==='max'?+el.value:el.value); render();});});
+document.getElementById('preset').addEventListener('click',()=>{if(applyRec())markAct('preset');render();});
+document.getElementById('pchosen').addEventListener('click',()=>{Object.assign(st,P.chosen,{sel:null});markAct('pchosen');document.getElementById('precmsg').textContent='Showing your chosen plan: UMass UWW + UT Information Security and Integrity, aiming at ISD.';render();});
+document.getElementById('pbest').addEventListener('click',()=>{const role=by(P.roles,st.role);let best=null;
+  P.ba.filter(progOK).forEach(b=>P.ma.filter(progOK).forEach(m=>{const e=evalPlan(b,m,role),c=(b.cost??5e5)+(m.cost??5e5);if(F.max&&c>F.max)return;if(!best||e.pct>best.p+1e-9||(Math.abs(e.pct-best.p)<1e-9&&c<best.c))best={p:e.pct,c,b:b.id,m:m.id};}));
+  if(best){st.ba=best.b;st.ma=best.m;markAct('pbest');document.getElementById('precmsg').textContent=`Best plan for ${role.title} within your filters (cheaper plan wins ties).`;} render();});
+document.getElementById('psave').addEventListener('click',()=>{ const dup=SV.some(s=>s.ba===st.ba&&s.ma===st.ma&&s.role===st.role); const m=document.getElementById('psavemsg');
+  if(dup){m.textContent='This exact path is already saved. See the Saved paths tab.';return;}
+  addSaved(st); renderSaved(); m.innerHTML='Saved. <a href="#saved">Compare it in Saved paths</a>.'; });
+const pick=t=>{st.sel=st.sel===t?null:t;render();};
+document.getElementById('pmap').addEventListener('click',e=>{const g=e.target.closest('.lane');if(g)pick(g.dataset.t);});
+document.getElementById('pmap').addEventListener('keydown',e=>{const g=e.target.closest('.lane');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(g.dataset.t);}});
+document.getElementById('pglance').addEventListener('click',e=>{const b=e.target.closest('.gl');if(b){st[b.dataset.k]=b.dataset.v;render();}});
+document.getElementById('ptiming').addEventListener('click',e=>{const b=e.target.closest('.tcard');if(b){st.role=b.dataset.r;render();document.getElementById('pmap').scrollIntoView({behavior:'smooth',block:'center'});}});
+applyCost();
+// starting point: recommended for default filters, plus preloaded comparisons
+applyRec();
+const rec={ba:st.ba,ma:st.ma,role:st.role};
+addSaved(P.chosen,'My chosen plan: UWW + UT → ISD');
+addSaved(rec,'Recommended for my filters');
+addSaved({ba:'ksc',ma:'hesjrn',role:'mpuvvp'},'Visual storytelling: Keene State + Harvard ALM → More Perfect Union');
+addSaved({ba:'uww',ma:'ut',role:'fpsales'},'Use my sales experience now, study on the side');
+setupSaved(); renderSaved(); allPrograms(); addEventListener('hashchange',()=>window.scrollTo(0,0));
+if(P.transcript){const t=P.transcript;document.getElementById('ptranscript').innerHTML=`<details class="trc"><summary><b>Your transcript:</b> ${t.earned} credits earned, ${t.gpa} GPA, ${t.inprog} in progress, ${t.reg} more registered through April 2027 (private)</summary>
+ <p>${esc(t.school)}. Costs on this page assume 27 transfer credits, which you'll have after the January–February 2027 term. If you finish the March–April term too, you'll have 33, which takes about 6 credits off any bachelor's estimate.</p>
+ <p><b>Done:</b></p><ul>${t.done.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p><b>In progress and registered:</b></p><ul>${t.next.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+ <p class="note">Your ${esc(t.gpa)} GPA clears the 3.0 minimum most of these master's programs list. Courses only transfer once the receiving school evaluates an official transcript, so ask each school for a free unofficial credit evaluation before you apply.</p></details>`;}
+render();
+})();
+</script>
+</body>
+</html>
