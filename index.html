@@ -308,6 +308,7 @@ nav.tabs{flex-wrap:wrap;row-gap:4px}
 
 
 
+
 <section id="saved-view" hidden>
 <header>
   <h1>Saved paths</h1>
@@ -751,8 +752,14 @@ function allPrograms(){
    <div class="tablewrap"><table><thead><tr><th>Program</th><th>Level</th><th>Fit</th><th>Tuition</th><th>Where</th><th>Blockers</th><th>Course evidence</th></tr></thead><tbody>${rows(P.ba,"Bachelor's")}${rows(P.ma,"Master's")}</tbody></table></div>`;
   const foot=host.querySelector('footer'); foot?host.insertBefore(sec,foot):host.appendChild(sec);
 }
-let ACT=null; function markAct(id){ ACT={id,ba:st.ba,ma:st.ma,role:st.role}; }
-function showAct(){ ['preset','pbest','pchosen'].forEach(id=>{const b=document.getElementById(id); if(!b) return; const on=!!ACT&&ACT.id===id&&ACT.ba===st.ba&&ACT.ma===st.ma&&ACT.role===st.role; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on);}); }
+/* ACT = the preset button currently lit, the plan it applied, and what was showing before (so a second click can undo it) */
+let ACT=null; function markAct(id,prev){ ACT={id,ba:st.ba,ma:st.ma,role:st.role,prev}; }
+const isOn=id=>!!ACT&&ACT.id===id&&ACT.ba===st.ba&&ACT.ma===st.ma&&ACT.role===st.role;
+const snap=()=>({ba:st.ba,ma:st.ma,role:st.role,act:ACT,msg:document.getElementById('precmsg').textContent});
+/* returns true if the button was lit and has now been turned off */
+function undoAct(id){ if(!isOn(id)) return false; const p=ACT.prev;
+  Object.assign(st,{ba:p.ba,ma:p.ma,role:p.role,sel:null}); ACT=p.act; document.getElementById('precmsg').textContent=p.msg; render(); return true; }
+function showAct(){ ['preset','pbest','pchosen'].forEach(id=>{const b=document.getElementById(id); if(!b) return; const on=isOn(id); b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); b.title=on?'Click again to go back to what you had before':'';}); }
 function render(){
   const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma), role=by(P.roles,st.role), ev=evalPlan(ba,ma,role);
   fill(); ['ba','ma','role'].forEach(k=>document.getElementById('p'+k).value=st[k]); document.getElementById('prolefull').textContent=`Selected: ${role.title}, ${role.org}`;
@@ -766,11 +773,11 @@ function applyRec(){ const r=recommend(); const m=document.getElementById('precm
 const FI={floc:'loc',fmax:'max',fblk:'hideBlk',fval:'vals',fexp:'hideExp',fstrong:'strong'};
 document.getElementById('freimb').addEventListener('change',e=>{REIMB=e.target.checked;applyCost();render();renderSaved();const ap=document.getElementById('allprogs');if(ap){ap.remove();allPrograms();}});
 Object.entries(FI).forEach(([id,k])=>{const el=document.getElementById(id); el.addEventListener('change',()=>{F[k]=el.type==='checkbox'?el.checked:(k==='max'?+el.value:el.value); render();});});
-document.getElementById('preset').addEventListener('click',()=>{if(applyRec())markAct('preset');render();});
-document.getElementById('pchosen').addEventListener('click',()=>{Object.assign(st,P.chosen,{sel:null});markAct('pchosen');document.getElementById('precmsg').textContent='Showing your chosen plan: UMass UWW + UT Information Security and Integrity, aiming at ISD.';render();});
-document.getElementById('pbest').addEventListener('click',()=>{const role=by(P.roles,st.role);let best=null;
+document.getElementById('preset').addEventListener('click',()=>{if(undoAct('preset'))return; const prev=snap(); if(applyRec())markAct('preset',prev);render();});
+document.getElementById('pchosen').addEventListener('click',()=>{if(undoAct('pchosen'))return; const prev=snap(); Object.assign(st,P.chosen,{sel:null});markAct('pchosen',prev);document.getElementById('precmsg').textContent='Showing your chosen plan: UMass UWW + UT Information Security and Integrity, aiming at ISD.';render();});
+document.getElementById('pbest').addEventListener('click',()=>{if(undoAct('pbest'))return; const prev=snap(); const role=by(P.roles,st.role);let best=null;
   P.ba.filter(progOK).forEach(b=>P.ma.filter(progOK).forEach(m=>{const e=evalPlan(b,m,role),c=(b.cost??5e5)+(m.cost??5e5);if(F.max&&c>F.max)return;if(!best||e.pct>best.p+1e-9||(Math.abs(e.pct-best.p)<1e-9&&c<best.c))best={p:e.pct,c,b:b.id,m:m.id};}));
-  if(best){st.ba=best.b;st.ma=best.m;markAct('pbest');document.getElementById('precmsg').textContent=`Best plan for ${role.title} within your filters (cheaper plan wins ties).`;} render();});
+  if(best){st.ba=best.b;st.ma=best.m;markAct('pbest',prev);document.getElementById('precmsg').textContent=`Best plan for ${role.title} within your filters (cheaper plan wins ties).`;} render();});
 document.getElementById('psave').addEventListener('click',()=>{ const dup=SV.some(s=>s.ba===st.ba&&s.ma===st.ma&&s.role===st.role); const m=document.getElementById('psavemsg');
   if(dup){m.textContent='This exact path is already saved. See the Saved paths tab.';return;}
   addSaved(st); renderSaved(); m.innerHTML='Saved. <a href="#saved">Compare it in Saved paths</a>.'; });
