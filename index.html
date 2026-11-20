@@ -213,6 +213,22 @@ nav.tabs{flex-wrap:wrap;row-gap:4px}
 .cmpt{width:100%;border-collapse:collapse}.cmpt th,.cmpt td{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}.cmpt thead th{color:#1f4e79}.cmpt tbody th{width:12rem;font-size:var(--text-sm)}.cmpt td small{display:block;color:var(--muted)}
 .cmpt td.cw{background:#e1eed9;color:#2e6b1f;font-weight:700}.cmpt td .d-y{color:#6b4600}.cmpt td .d-r{color:#9b2c22}
 @media(max-width:640px){.svtools select{min-width:0;width:100%}.svtools label{flex:1 1 100%}.cmpt tbody th{width:auto}}
+
+/* v9: job families, sector colors, posting picker */
+.pickers{grid-template-columns:1fr 1fr!important}.pickers>label:nth-of-type(3){grid-column:auto}
+@media(min-width:1280px){.pickers{grid-template-columns:1fr 1fr 1.2fr 1.2fr!important}}
+@media(max-width:640px){.pickers{grid-template-columns:1fr!important}}
+.sec{border-left:5px solid var(--sec,#888)!important}
+.gl.sec{border-left-width:5px}
+.tcard.sec{border-radius:0 var(--space-2) var(--space-2) 0}
+.pcard.fam{border-left-color:var(--sec)!important}
+.sectag{color:var(--sec,#555);font-weight:700}
+.tcard .sectag{color:var(--sec,#555)}
+.emp{margin:2px 0;padding-left:18px}
+.fposts{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.fpost{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--text-xs)}
+.fpost small{color:var(--muted)}.fpost .money{align-self:flex-start}
+.fpost:hover,.fpost:focus-visible{background:var(--surface-2)}.fpost.on{outline:2px solid var(--primary);background:var(--primary-hl)}
 </style></head>
 <body>
 <div class="wrap">
@@ -250,12 +266,14 @@ nav.tabs{flex-wrap:wrap;row-gap:4px}
 <div class="pickers">
   <label>Bachelor's<select id="pba"></select></label>
   <label>Master's<select id="pma"></select></label>
-  <label>Role<select id="prole"></select><span class="pfull" id="prolefull"></span></label>
+  <label>Job family<select id="prole"></select></label>
+  <label>Example posting (optional)<select id="ppost"></select><span class="pfull" id="prolefull"></span></label>
 </div>
 <fieldset class="pfilters"><legend>Filters</legend>
   <label>Location<select id="floc"><option value="any">Any, including moving</option><option value="near" selected>Online or commutable from Dublin</option><option value="online">Online only</option></select></label>
   <label>Max total tuition<select id="fmax"><option value="0">Any</option><option value="25000">$25K</option><option value="50000">$50K</option><option value="75000">$75K</option><option value="100000">$100K</option></select></label>
   <label>Role values<select id="fval"><option value="">Any</option><option value="public">Public-facing</option><option value="research">Research</option><option value="community">Community service</option><option value="worker">Pro-worker and rural</option><option value="nh">New Hampshire</option></select></label>
+  <label>Sector<select id="fsec"><option value="">Any</option><option value="think">Think tanks</option><option value="civil">Civil society</option><option value="watch">Watchdogs</option><option value="jrn">Journalism</option><option value="intel">Private threat intel</option><option value="tns">Platform trust &amp; safety</option><option value="civic">Data &amp; civic tech</option><option value="bridge">Bridge roles</option></select></label>
   <label class="chk"><input type="checkbox" id="freimb" checked> Count my employer tuition reimbursement ($5,250/yr)</label>
   <label class="chk"><input type="checkbox" id="fblk" checked> Hide anything with a blocker</label>
   <label class="chk"><input type="checkbox" id="fexp" checked> Hide expired postings</label>
@@ -287,6 +305,8 @@ nav.tabs{flex-wrap:wrap;row-gap:4px}
 
 <footer>Costs are tuition estimates for your remaining credits. With the reimbursement box checked, they subtract employer reimbursement of $5,250 a year (C or better in each class); full-time and relocation programs (Buffalo, Northeastern J+DS) get none, since full-time day classes mean leaving your job. Your remote job travels with you for temporary stays elsewhere, checked November 19, 2026. Salaries come from postings saved November 2, 2026, or from BLS national medians where marked. Years assume part-time study and are estimates.</footer>
 </section>
+
+
 
 
 
@@ -489,6 +509,13 @@ const COL={g:'#2e6b1f',y:'#c99a1c',r:'#9b2c22',none:'#bdb8ad',carry:'#8f99a3'};
 const V={g:2,y:1,r:0}, worst=(a,b)=>V[a]<=V[b]?a:b, FITW={g:'Strong fit',y:'Workable',r:'Weak fit'};
 const TIM={now:'Now, while in school, or on the side',ba:'After the bachelor\'s',ma:'After the master\'s (or with experience)'};
 const by=(arr,id)=>arr.find(x=>x.id===id);
+/* v9: P.roles are job families; P.posts are optional example postings (each has .family) */
+const PO=P.posts||[], SEC=P.sectors||{};
+const sc=r=>(SEC[r.sector]||{}).color||'#888', sn=r=>(SEC[r.sector]||{}).name||'';
+/* accept an old posting id where a family id is expected */
+function norm(x){ if(!by(P.roles,x.role)){ const p=by(PO,x.role); if(p) return {...x,role:p.family,post:p.id}; } return {...x,post:x.post||''}; }
+/* the role being scored: the chosen example posting, or else the family */
+function roleOf(x){ const f=by(P.roles,x.role), p=x.post&&by(PO,x.post); return p&&p.family===f.id?p:f; }
 const st={...P.default, sel:null};
 const money=n=>n==null?'Not listed':n?'$'+Math.round(n).toLocaleString():'$0';
 const kfmt=n=>n==null?'Not listed':n===0?'$0':'$'+(n>=100000?Math.round(n/1000):(Math.round(n/100)/10))+'K';
@@ -525,7 +552,7 @@ function evalPlan(ba,ma,role){
 const FITTAG={g:'Strong fit',y:'Workable',r:'Weak fit'};
 const VALW={public:'Public-facing',research:'Research',community:'Community service',worker:'Pro-worker & rural',nh:'New Hampshire'};
 const EVW={full:'Full course list with course codes',sample:'Sample courses only',overview:'Program overview only',none:''};
-const F={loc:'near',max:0,hideBlk:true,vals:'',hideExp:true,strong:false};
+const F={loc:'near',max:0,hideBlk:true,vals:'',sec:'',hideExp:true,strong:false};
 const NOW=new Date();
 const expired=r=>!!(r.deadline&&new Date(r.deadline+'T23:59:59')<NOW);
 const dfmt=d=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -536,6 +563,7 @@ function progOK(p){ if(p.id==='none') return true;
   if(F.hideBlk&&hasBlock(p)) return false;
   if(F.max&&(p.cost==null||p.cost>F.max)) return false; return true; }
 function roleOK(r,ba,ma){ if(F.vals&&!(r.vals||[]).includes(F.vals)) return false;
+  if(F.sec&&r.sector!==F.sec) return false;
   if(F.hideExp&&expired(r)) return false;
   if(F.hideBlk&&hasBlock(r)) return false;
   if(F.strong&&ba&&ma&&evalPlan(ba,ma,r).fit!=='g') return false; return true; }
@@ -560,18 +588,20 @@ function fill(){
     if(!ok.some(x=>x.id===cur)) h=`<optgroup label="Your current pick (outside your filters)">${opt(by(arr,cur))}</optgroup>`+h; return [h,ok.length]; };
   const [hb,nb]=o(P.ba,st.ba), [hm,nm]=o(P.ma,st.ma);
   document.getElementById('pba').innerHTML=hb; document.getElementById('pma').innerHTML=hm;
-  let nr=0;
-  let hr=['now','ba','ma'].map(k=>{const rs=P.roles.filter(r=>r.timing===k&&roleOK(r,ba,ma)).map(r=>({r,e:evalPlan(ba,ma,r)})).sort((x,y)=>y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0)); nr+=rs.length;
-    return rs.length?`<optgroup label="${esc(TIM[k])} (best fit for this plan first)">${rs.map(({r,e})=>`<option value="${r.id}">${FITTAG[e.fit]} · ${esc(r.org)}: ${esc(r.title)}</option>`).join('')}</optgroup>`:''}).join('');
-  const cr=by(P.roles,st.role); if(!roleOK(cr,ba,ma)) hr=`<optgroup label="Your current pick (outside your filters)"><option value="${cr.id}">${esc(cr.title)} (${esc(cr.org)})${expired(cr)?' · expired':''}</option></optgroup>`+hr;
+  let nr=0; const TSHORT={now:'now',ba:'after BA',ma:'after MA'};
+  let hr=Object.keys(SEC).map(k=>{const rs=P.roles.filter(r=>r.sector===k&&roleOK(r,ba,ma)).map(r=>({r,e:evalPlan(ba,ma,r)})).sort((x,y)=>y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0)); nr+=rs.length;
+    return rs.length?`<optgroup label="${esc(SEC[k].name)} (best fit for this plan first)">${rs.map(({r,e})=>`<option value="${r.id}">${FITTAG[e.fit]} · ${esc(r.title)} (${TSHORT[r.timing]})</option>`).join('')}</optgroup>`:''}).join('');
+  const cr=by(P.roles,st.role); if(!roleOK(cr,ba,ma)) hr=`<optgroup label="Your current pick (outside your filters)"><option value="${cr.id}">${esc(cr.title)} (${esc(cr.org)})</option></optgroup>`+hr;
   document.getElementById('prole').innerHTML=hr;
-  document.getElementById('pfcount').textContent=`Showing ${nb} of ${P.ba.length} bachelor's, ${nm-1} of ${P.ma.length-1} master's and ${nr} of ${P.roles.length} roles.`;
+  const ps=PO.filter(p=>p.family===cr.id&&(p.id===st.post||!(F.hideExp&&expired(p))));
+  document.getElementById('ppost').innerHTML=`<option value="">None: score the family's typical needs</option>`+ps.map(p=>`<option value="${p.id}">${esc(p.org)}: ${esc(p.title)}${expired(p)?' · expired':''}${hasBlock(p)?' · has a blocker':''}</option>`).join('');
+  document.getElementById('pfcount').textContent=`Showing ${nb} of ${P.ba.length} bachelor's, ${nm-1} of ${P.ma.length-1} master's and ${nr} of ${P.roles.length} job families.`;
 }
 function drawMap(ba,ma,role,ev){
   /* X = where each column's dots sit. Column 0 is wider and its dot sits at the right, so thread names fit to its left. */
   const X=[205,360,620,860], CX=[120,360,620,860], CW=[220,200,200,200], top=92, lane=60, H=top+T.length*lane+10;
   const svg=document.getElementById('pmap'); svg.setAttribute('viewBox',`0 0 1000 ${H}`);
-  const hoods=[['You now','Skills today'],["Bachelor's",ba.short],["Master's",ma.short],['Role',role.title]];
+  const hoods=[['You now','Skills today'],["Bachelor's",ba.short],["Master's",ma.short],[role.fam?'Job family':'Example posting',role.title]];
   let h='';
   hoods.forEach(([a,b],i)=>{const x=CX[i]-CW[i]/2; h+=`<rect x="${x}" y="8" width="${CW[i]}" height="${H-14}" rx="14" fill="${i%2?'#efede8':'#f3f1ec'}" stroke="#d9d6cf"/>
    <text x="${CX[i]}" y="32" text-anchor="middle" class="hood">${esc(a)}</text><text x="${CX[i]}" y="52" text-anchor="middle" class="hoodsub">${esc(b.length>28?b.slice(0,27)+'…':b)}</text>`;});
@@ -622,21 +652,21 @@ function summary(ba,ma,role,ev){
 function glance(){
   const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma);
   const row=(arr,k)=>arr.filter(progOK).sort((a,b)=>(a.cost??1e9)-(b.cost??1e9)).map(p=>`<button class="gl${st[k]===p.id?' on':''}" data-k="${k}" data-v="${p.id}"><b>${esc(p.short)}</b>${costChip(p)}</button>`).join('');
-  const roles=P.roles.filter(r=>roleOK(r,ba,ma)).sort((a,b)=>(b.salnum||-1)-(a.salnum||-1)).map(r=>`<button class="gl${st.role===r.id?' on':''}" data-k="role" data-v="${r.id}"><b>${esc(r.org)}</b>${payChip(r)}</button>`).join('');
+  const roles=P.roles.filter(r=>roleOK(r,ba,ma)).sort((a,b)=>(b.salnum||-1)-(a.salnum||-1)).map(r=>`<button class="gl sec${st.role===r.id?' on':''}" style="--sec:${sc(r)}" data-k="role" data-v="${r.id}" title="${esc(r.title)} (${esc(sn(r))})"><b>${esc(r.title)}</b>${payChip(r)}</button>`).join('');
   document.getElementById('pglance').innerHTML=`
    <div class="legend"><span class="lg">Color scale</span><span class="sw t1"></span><span class="sw t2"></span><span class="sw t3"></span><span class="sw t4"></span><span class="sw t5"></span><span class="lgt">Green: lowest tuition or highest pay. Red: highest tuition or lowest pay. Gray: not listed or hourly. Only items that pass your filters are shown.</span></div>
    <h3>Bachelor's tuition, lowest to highest</h3><div class="glrow">${row(P.ba,'ba')}</div>
    <h3>Master's tuition, lowest to highest</h3><div class="glrow">${row(P.ma,'ma')}</div>
-   <h3>Role pay, highest to lowest</h3><div class="glrow">${roles}</div>`;
+   <h3>Typical pay by job family, highest to lowest</h3><div class="glrow">${roles}</div>`;
 }
 function timing(ba,ma){
   const TH={now:['1','Now','With the skills and experience you have today'],ba:['2','After bachelor\'s','Entry and mid-level roles'],ma:['3','After master\'s','Or with several years of experience']};
   document.getElementById('ptiming').innerHTML=['now','ba','ma'].map(k=>{const rs=P.roles.filter(r=>r.timing===k&&roleOK(r,ba,ma)).map(r=>({r,e:evalPlan(ba,ma,r)})).sort((x,y)=>y.e.pct-x.e.pct||(y.r.salnum||0)-(x.r.salnum||0));
-   return `<div class="tcol t-${k}"><div class="thead"><span class="tnum">${TH[k][0]}</span><span><span class="tt">${TH[k][1]}</span><span class="ts">${TH[k][2]}</span></span></div>${rs.length?rs.map(({r,e})=>`<button class="tcard${r.id===st.role?' on':''}" data-r="${r.id}"><span class="sdot s-${e.fit}"></span><span><b>${esc(r.title)}</b><small>${esc(r.org)}</small><small>${esc(r.type)}${r.deadline?` · ${expired(r)?'Expired '+dfmt(r.deadline):'Deadline '+dfmt(r.deadline)}`:''}</small>${payChip(r)}${(r.blk||[]).length?`<span class="bcount">${(r.blk||[]).filter(x=>x.k==='block').length?'Blocker':'Hurdle'}: ${esc(r.blk[0].t)}</span>`:''}</span></button>`).join(''):'<p class="empty">No roles here match your filters.</p>'}</div>`}).join('');
+   return `<div class="tcol t-${k}"><div class="thead"><span class="tnum">${TH[k][0]}</span><span><span class="tt">${TH[k][1]}</span><span class="ts">${TH[k][2]}</span></span></div>${rs.length?rs.map(({r,e})=>{const n=(r.posts||[]).length; return `<button class="tcard sec${r.id===st.role?' on':''}" style="--sec:${sc(r)}" data-r="${r.id}"><span class="sdot s-${e.fit}"></span><span><b>${esc(r.title)}</b><small class="sectag">${esc(sn(r))}</small><small>${n} example posting${n===1?'':'s'}</small>${payChip(r)}${(r.blk||[]).length?`<span class="bcount">${(r.blk||[]).filter(x=>x.k==='block').length?'Blocker':'Hurdle'}: ${esc(r.blk[0].t)}</span>`:''}</span></button>`}).join(''):'<p class="empty">No job families here match your filters.</p>'}</div>`}).join('');
 }
 const blkList=(xs)=>xs.length?`<ul class="blk">${xs.map(x=>`<li class="${x.k}"><b>${x.k==='block'?'Blocker':'Hurdle'}</b> ${esc(x.t)}</li>`).join('')}</ul>`:'<p class="note">No blockers or hurdles recorded.</p>';
 function progs(ba,ma){
-  const role=by(P.roles,st.role);
+  const role=roleOf(st), F0=by(P.roles,st.role);
   const card=(p,lab)=>p.id==='none'?`<article class="pcard"><h3>${lab}: none</h3><p>${esc(p.suited[0])}</p><p class="note">${esc(p.hard[0])}</p></article>`:`<article class="pcard f-${p.fit}"><div class="plab">${lab}</div><h3>${esc(p.name)}</h3><div class="org">${esc(p.deg)}</div>
    <div class="pmoney">${costChip(p,REIMB?'Your cost after reimbursement':'Tuition (est.)')}</div><div class="meta"><span class="tag">${esc(p.fmt)}</span><span class="tag">${esc(p.whereNote||p.fmt)}</span><span class="tag">${esc(p.yearsNote)}</span></div>
    <p class="note">${esc(p.costNote)}${p.reimbNote?' '+esc(p.reimbNote):''}${p.sticker!=null&&REIMB&&p.reimb?` Full price: ${kfmt(p.sticker)}.`:''}</p>
@@ -646,32 +676,48 @@ function progs(ba,ma){
    <div class="gap"><b>CHALLENGES</b><ul>${p.hard.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
    ${p.hardPriv?`<p class="privnote"><b>For your learning profile:</b> ${esc(p.hardPriv)}</p>`:''}
    <div class="links">${p.src.map(u=>`<a href="${esc(U[u])}" target="_blank" rel="noopener">Source: ${esc(new URL(U[u]).hostname.replace('www.',''))}</a>`).join('')}</div></article>`;
-  const ev=evalPlan(ba,ma,role);
-  const why=T.filter(t=>role.need[t.id]).map(t=>`<li class="d-${ev.seg[t.id].s3}"><b>${esc(t.name)}</b> (${role.need[t.id]==='core'?'core':'helps'}): ${ev.seg[t.id].s3==='g'?'strong':ev.seg[t.id].s3==='y'?'workable':'gap'}</li>`).join('');
-  const rcard=`<article class="pcard rcard f-${ev.fit}"><div class="plab">Role</div><h3>${esc(role.title)}</h3><div class="org">${esc(role.org)} · ${esc(role.type)}</div>
+  const whyOf=(r,e)=>T.filter(t=>r.need[t.id]).map(t=>`<li class="d-${e.seg[t.id].s3}"><b>${esc(t.name)}</b> (${r.need[t.id]==='core'?'core':'helps'}): ${e.seg[t.id].s3==='g'?'strong':e.seg[t.id].s3==='y'?'workable':'gap'}</li>`).join('');
+  const host=u=>{try{return new URL(u).hostname.replace('www.','')}catch(e){return u}};
+  const evF=evalPlan(ba,ma,F0);
+  const plist=PO.filter(p=>p.family===F0.id&&(p.id===st.post||!(F.hideExp&&expired(p))));
+  const fcard=`<article class="pcard rcard fam sec f-${evF.fit}" style="--sec:${sc(F0)}"><div class="plab"><span class="sectag">${esc(sn(F0))}</span> · Job family</div><h3>${esc(F0.title)}</h3>
+   <div class="org">Typical titles: ${F0.titles.map(esc).join(', ')}</div>
+   <div class="pmoney">${payChip(F0,'Typical pay')}</div><p class="note">${esc(F0.payNote)} <a href="${esc(F0.url)}" target="_blank" rel="noopener">Source: ${esc(host(F0.url))}</a></p>
+   <div class="meta">${(F0.vals||[]).map(v=>`<span class="tag">${esc(VALW[v])}</span>`).join('')}<span class="tag">${esc(TIM[F0.timing])}</span></div>
+   ${F0.note?`<p class="note">${esc(F0.note)}</p>`:''}
+   ${(F0.blk||[]).length?`<h4>Blockers and hurdles</h4>${blkList(F0.blk)}`:''}
+   <h4>Why this fit rating${role.fam?'':' (family needs)'}</h4><ul class="why">${whyOf(F0,evF)}</ul>
+   <h4>Example employers</h4><ul class="emp">${F0.employers.map(e=>`<li><a href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.n)}</a></li>`).join('')}</ul>
+   <h4>Example postings</h4>${plist.length?`<div class="fposts">${plist.map(p=>`<button class="fpost${p.id===st.post?' on':''}" data-p="${p.id}" aria-pressed="${p.id===st.post}"><b>${esc(p.title)}</b><small>${esc(p.org)} · ${esc(p.type)}${p.deadline?` · ${expired(p)?'Expired':'Deadline'} ${dfmt(p.deadline)}`:''}</small>${payChip(p)}</button>`).join('')}</div><p class="note">Pick a posting to score your plan against it. Pick it again to go back to the family.</p>`:'<p class="note">No current postings pass your filters.</p>'}
+  </article>`;
+  if(role.fam){ document.getElementById('pprogs').innerHTML=card(ba,"Bachelor's")+card(ma,"Master's")+fcard; return; }
+  const ev=evalPlan(ba,ma,role), why=whyOf(role,ev);
+  const rcard=`<article class="pcard rcard f-${ev.fit}"><div class="plab">Example posting</div><h3>${esc(role.title)}</h3><div class="org">${esc(role.org)} · ${esc(role.type)}</div>
    <div class="pmoney">${payChip(role,'Pay')}</div>
    <div class="meta">${(role.vals||[]).map(v=>`<span class="tag">${esc(VALW[v])}</span>`).join('')}<span class="tag">Page checked ${dfmt(role.checked)}</span>${role.deadline?`<span class="tag${expired(role)?' exp':''}">${expired(role)?'Expired':'Deadline'} ${dfmt(role.deadline)}</span>`:''}</div>
    ${role.note?`<p class="note">${esc(role.note)}</p>`:''}
    <h4>Blockers and hurdles</h4>${blkList(role.blk||[])}
    <h4>Why this fit rating</h4><ul class="why">${why}</ul>
    <div class="links">${role.url?`<a href="${esc(role.url)}" target="_blank" rel="noopener">Source: ${esc(new URL(role.url).hostname.replace('www.',''))}</a>`:''}</div></article>`;
-  document.getElementById('pprogs').innerHTML=card(ba,"Bachelor's")+card(ma,"Master's")+rcard;
+  document.getElementById('pprogs').innerHTML=card(ba,"Bachelor's")+card(ma,"Master's")+fcard+rcard;
 }
 /* ---- saved paths ---- */
 const SV=[]; let SVN=0;
 function pathFacts(x){
-  const ba=by(P.ba,x.ba), ma=by(P.ma,x.ma), role=by(P.roles,x.role), ev=evalPlan(ba,ma,role);
+  const ba=by(P.ba,x.ba), ma=by(P.ma,x.ma), role=roleOf(x), fam=by(P.roles,x.role), ev=evalPlan(ba,ma,role);
   const tot=(ba.cost==null||ma.cost==null)?null:ba.cost+ma.cost;
   const tag=(src,arr)=>arr.map(b=>({...b,t:src+': '+b.t}));
-  const items=[...tag(ba.short,ba.blk||[]),...tag(ma.short,ma.blk||[]),...tag(role.org,role.blk||[])];
+  const items=[...tag(ba.short,ba.blk||[]),...tag(ma.short,ma.blk||[]),...tag(role.fam?role.title:role.org,role.blk||[])];
   if(expired(role)) items.unshift({k:'block',t:role.org+': posting expired '+dfmt(role.deadline)});
   if(role.timing==='ma'&&ma.id==='none') items.push({k:'hurdle',t:'This role usually expects a master\'s or several years of experience'});
   if(tot==null) items.push({k:'hurdle',t:'One tuition figure is not published'});
   const gaps=T.filter(t=>role.need[t.id]&&ev.seg[t.id].s3!=='g').map(t=>({t:t.name,need:role.need[t.id],c:ev.seg[t.id].s3}));
   const where=[ba,ma].filter(p=>p.id!=='none').map(p=>p.short+': '+(WG[p.where]||p.where)).join('; ');
-  return {ba,ma,role,ev,tot,yrs:ba.years+ma.years,items,gaps,where};
+  return {ba,ma,role,fam,ev,tot,yrs:ba.years+ma.years,items,gaps,where};
 }
-function addSaved(x,name){ SV.push({id:++SVN,name:name||`${by(P.ba,x.ba).short} + ${by(P.ma,x.ma).short} → ${by(P.roles,x.role).org}`,ba:x.ba,ma:x.ma,role:x.role,note:x.note||''}); }
+function addSaved(x,name){ x=norm(x); const r=roleOf(x); SV.push({id:++SVN,name:name||`${by(P.ba,x.ba).short} + ${by(P.ma,x.ma).short} → ${r.fam?r.title:r.org}`,ba:x.ba,ma:x.ma,role:x.role,post:x.post,note:x.note||''}); }
+/* role cell text: family name, with the posting (or the sector) underneath */
+const roleCell=f=>esc(f.fam.title)+'<small>'+(f.role.fam?esc(sn(f.fam)):'Posting: '+esc(f.role.title)+', '+esc(f.role.org))+'</small>';
 function renderSaved(){
   const el=document.getElementById('svlist'); if(!el) return;
   document.getElementById('svcount').textContent=SV.length?`${SV.length} saved path${SV.length>1?'s':''}.`:'';
@@ -687,7 +733,7 @@ function renderSaved(){
     <dl>
      <div><dt>Bachelor's</dt><dd>${esc(f.ba.short)}<small>${esc(f.ba.deg)}</small></dd></div>
      <div><dt>Master's</dt><dd>${esc(f.ma.short)}<small>${esc(f.ma.deg)}</small></dd></div>
-     <div><dt>Role</dt><dd>${esc(f.role.title)}<small>${esc(f.role.org)}</small></dd></div>
+     <div><dt>Job family</dt><dd>${roleCell(f)}</dd></div>
      <div><dt>Plan fit</dt><dd><span class="pill fit-${f.ev.fit==='g'?'green':f.ev.fit==='y'?'yellow':'red'}"><span class="dot"></span>${FITW[f.ev.fit]} (${Math.round(f.ev.pct*100)}%)</span>${badge(f.ev.pct===bestFit,'Best fit')}</dd></div>
      <div><dt>${REIMB?'Your total cost':'Total tuition'}</dt><dd>${chip('cost',tier(f.tot,totals(),false),f.tot==null?'Incomplete':kfmt(f.tot),'')}${badge(f.tot!=null&&f.tot===lowTot,'Lowest cost')}</dd></div>
      <div><dt>School time</dt><dd>About ${f.yrs} years</dd></div>
@@ -719,7 +765,7 @@ function svCompare(){ const A=SV.find(x=>x.id==document.getElementById('svA').va
   const row=(lab,va,vb,w)=>{w=w||['',''];return `<tr><th scope="row">${lab}</th><td class="${w[0]}">${va}</td><td class="${w[1]}">${vb}</td></tr>`;};
   const gl=f=>f.gaps.length?f.gaps.map(g=>`<span class="d-${g.c}">${esc(g.t)}</span>`).join(', '):'None';
   el.innerHTML=`<p class="note">Green cells mark the better side of each row.</p><div class="tablewrap"><table class="cmpt"><thead><tr><th></th><th>${esc(A.name)}</th><th>${esc(B.name)}</th></tr></thead><tbody>
-   ${row("Bachelor's",esc(a.ba.short),esc(b.ba.short))}${row("Master's",esc(a.ma.short),esc(b.ma.short))}${row('Role',esc(a.role.title)+'<small>'+esc(a.role.org)+'</small>',esc(b.role.title)+'<small>'+esc(b.role.org)+'</small>')}
+   ${row("Bachelor's",esc(a.ba.short),esc(b.ba.short))}${row("Master's",esc(a.ma.short),esc(b.ma.short))}${row('Job family',roleCell(a),roleCell(b))}
    ${row('Plan fit',FITW[a.ev.fit]+' ('+Math.round(a.ev.pct*100)+'%)',FITW[b.ev.fit]+' ('+Math.round(b.ev.pct*100)+'%)',win(a.ev.pct,b.ev.pct,true))}
    ${row(REIMB?'Your total cost':'Total tuition',a.tot==null?'Incomplete':kfmt(a.tot),b.tot==null?'Incomplete':kfmt(b.tot),win(a.tot,b.tot,false))}
    ${row('School time','About '+a.yrs+' years','About '+b.yrs+' years',win(a.yrs,b.yrs,false))}
@@ -727,7 +773,7 @@ function svCompare(){ const A=SV.find(x=>x.id==document.getElementById('svA').va
    ${row('Blockers',nb(a),nb(b),win(nb(a),nb(b),false))}${row('Hurdles',nh(a),nh(b),win(nh(a),nh(b),false))}
    ${row('Skill gaps',gl(a),gl(b),win(a.gaps.length,b.gaps.length,false))}${row('Where',esc(a.where||'No school'),esc(b.where||'No school'))}
    ${row('Blocker and hurdle details',blkList(a.items),blkList(b.items))}</tbody></table></div>`; }
-function updCode(){ try{ document.getElementById('svcode').value=btoa(unescape(encodeURIComponent(JSON.stringify(SV.map(x=>[x.name,x.ba,x.ma,x.role,x.note]))))); }catch(e){} }
+function updCode(){ try{ document.getElementById('svcode').value=btoa(unescape(encodeURIComponent(JSON.stringify(SV.map(x=>[x.name,x.ba,x.ma,x.role,x.note,x.post]))))); }catch(e){} }
 function setupSaved(){
   const el=document.getElementById('svlist'); if(!el) return;
   document.getElementById('svshow').addEventListener('change',e=>{SVSHOW=e.target.value;svFilter();});
@@ -736,11 +782,12 @@ function setupSaved(){
   el.addEventListener('click',e=>{const b=e.target.closest('button[data-a]'); if(!b) return; const c=b.closest('.svcard'), i=SV.findIndex(s=>s.id==c.dataset.id);
     if(b.dataset.a==='del') SV.splice(i,1);
     if(b.dataset.a==='left'&&i>0) SV.splice(i-1,0,SV.splice(i,1)[0]);
-    if(b.dataset.a==='open'){ const x=SV[i]; Object.assign(st,{ba:x.ba,ma:x.ma,role:x.role,sel:null}); location.hash='#paths'; render(); window.scrollTo(0,0); return; }
+    if(b.dataset.a==='open'){ const x=SV[i]; Object.assign(st,{ba:x.ba,ma:x.ma,role:x.role,post:x.post||'',sel:null}); location.hash='#paths'; render(); window.scrollTo(0,0); return; }
     renderSaved();});
   document.getElementById('svload').addEventListener('click',()=>{const msg=document.getElementById('svmsg');
     try{ const arr=JSON.parse(decodeURIComponent(escape(atob(document.getElementById('svcode').value.trim()))));
-      let n=0; arr.forEach(([name,ba,ma,role,note])=>{ if(by(P.ba,ba)&&by(P.ma,ma)&&by(P.roles,role)){ if(!SV.some(s=>s.ba===ba&&s.ma===ma&&s.role===role&&s.name===name)){addSaved({ba,ma,role,note},name);n++;} } });
+      let n=0; arr.forEach(([name,ba,ma,role,note,post])=>{ const x=norm({ba,ma,role,note,post}); /* old codes carry a posting id as the role */
+        if(by(P.ba,ba)&&by(P.ma,ma)&&by(P.roles,x.role)){ if(!SV.some(s=>s.ba===ba&&s.ma===ma&&s.role===x.role&&(s.post||'')===x.post&&s.name===name)){addSaved(x,name);n++;} } });
       msg.textContent=`Loaded ${n} path${n===1?'':'s'}.`; renderSaved(); }catch(err){ msg.textContent='That code could not be read. Copy the whole code and try again.'; } });
   document.getElementById('svcopy').addEventListener('click',()=>{const t=document.getElementById('svcode'); t.focus(); t.select(); let ok=false; try{ok=document.execCommand('copy');}catch(e){} document.getElementById('svmsg').textContent=ok?'Code copied.':'Code selected. Press Ctrl+C (or Cmd+C) to copy it.';});
 }
@@ -753,43 +800,46 @@ function allPrograms(){
   const foot=host.querySelector('footer'); foot?host.insertBefore(sec,foot):host.appendChild(sec);
 }
 /* ACT = the preset button currently lit, the plan it applied, and what was showing before (so a second click can undo it) */
-let ACT=null; function markAct(id,prev){ ACT={id,ba:st.ba,ma:st.ma,role:st.role,prev}; }
-const isOn=id=>!!ACT&&ACT.id===id&&ACT.ba===st.ba&&ACT.ma===st.ma&&ACT.role===st.role;
-const snap=()=>({ba:st.ba,ma:st.ma,role:st.role,act:ACT,msg:document.getElementById('precmsg').textContent});
+let ACT=null; function markAct(id,prev){ ACT={id,ba:st.ba,ma:st.ma,role:st.role,post:st.post,prev}; }
+const isOn=id=>!!ACT&&ACT.id===id&&ACT.ba===st.ba&&ACT.ma===st.ma&&ACT.role===st.role&&ACT.post===st.post;
+const snap=()=>({ba:st.ba,ma:st.ma,role:st.role,post:st.post,act:ACT,msg:document.getElementById('precmsg').textContent});
 /* returns true if the button was lit and has now been turned off */
 function undoAct(id){ if(!isOn(id)) return false; const p=ACT.prev;
-  Object.assign(st,{ba:p.ba,ma:p.ma,role:p.role,sel:null}); ACT=p.act; document.getElementById('precmsg').textContent=p.msg; render(); return true; }
+  Object.assign(st,{ba:p.ba,ma:p.ma,role:p.role,post:p.post,sel:null}); ACT=p.act; document.getElementById('precmsg').textContent=p.msg; render(); return true; }
 function showAct(){ ['preset','pbest','pchosen'].forEach(id=>{const b=document.getElementById(id); if(!b) return; const on=isOn(id); b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); b.title=on?'Click again to go back to what you had before':'';}); }
 function render(){
-  const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma), role=by(P.roles,st.role), ev=evalPlan(ba,ma,role);
-  fill(); ['ba','ma','role'].forEach(k=>document.getElementById('p'+k).value=st[k]); document.getElementById('prolefull').textContent=`Selected: ${role.title}, ${role.org}`;
+  const ba=by(P.ba,st.ba), ma=by(P.ma,st.ma), role=roleOf(st), ev=evalPlan(ba,ma,role);
+  fill(); ['ba','ma','role','post'].forEach(k=>document.getElementById('p'+k).value=st[k]||'');
+  document.getElementById('prolefull').textContent=role.fam?`Scoring the ${role.title} family (${role.org}).`:`Scoring this posting: ${role.title}, ${role.org}.`;
   drawMap(ba,ma,role,ev); threadInfo(ba,ma,role,ev); summary(ba,ma,role,ev); glance(); timing(ba,ma); progs(ba,ma); showAct();
 }
 function applyRec(){ const r=recommend(); const m=document.getElementById('precmsg');
   if(!r){ m.textContent='No plan passes all your filters. Loosen one to see a recommendation.'; return false; }
-  Object.assign(st,{ba:r.ba,ma:r.ma,role:r.role,sel:null});
-  m.textContent=`Recommended for your filters: ${by(P.ba,r.ba).short} + ${by(P.ma,r.ma).short}. It makes you a strong fit for ${r.g} of the ${r.n} later-stage roles that pass your filters. The role shown is the best fit paying $70K or more.`; return true; }
-['ba','ma','role'].forEach(k=>document.getElementById('p'+k).addEventListener('change',e=>{st[k]=e.target.value;render();}));
-const FI={floc:'loc',fmax:'max',fblk:'hideBlk',fval:'vals',fexp:'hideExp',fstrong:'strong'};
+  Object.assign(st,{ba:r.ba,ma:r.ma,role:r.role,post:'',sel:null});
+  m.textContent=`Recommended for your filters: ${by(P.ba,r.ba).short} + ${by(P.ma,r.ma).short}. It makes you a strong fit for ${r.g} of the ${r.n} later-stage job families that pass your filters. The family shown is the best fit with typical pay of $70K or more.`; return true; }
+['ba','ma','role','post'].forEach(k=>document.getElementById('p'+k).addEventListener('change',e=>{st[k]=e.target.value; if(k==='role') st.post=''; render();}));
+document.getElementById('pprogs').addEventListener('click',e=>{const b=e.target.closest('.fpost'); if(b){ st.post=st.post===b.dataset.p?'':b.dataset.p; render(); }});
+document.getElementById('fsec').innerHTML='<option value="">Any</option>'+Object.entries(SEC).map(([k,s])=>`<option value="${k}">${esc(s.name)}</option>`).join('');
+const FI={floc:'loc',fmax:'max',fblk:'hideBlk',fval:'vals',fsec:'sec',fexp:'hideExp',fstrong:'strong'};
 document.getElementById('freimb').addEventListener('change',e=>{REIMB=e.target.checked;applyCost();render();renderSaved();const ap=document.getElementById('allprogs');if(ap){ap.remove();allPrograms();}});
 Object.entries(FI).forEach(([id,k])=>{const el=document.getElementById(id); el.addEventListener('change',()=>{F[k]=el.type==='checkbox'?el.checked:(k==='max'?+el.value:el.value); render();});});
 document.getElementById('preset').addEventListener('click',()=>{if(undoAct('preset'))return; const prev=snap(); if(applyRec())markAct('preset',prev);render();});
 document.getElementById('pchosen').addEventListener('click',()=>{if(undoAct('pchosen'))return; const prev=snap(); Object.assign(st,P.chosen,{sel:null});markAct('pchosen',prev);document.getElementById('precmsg').textContent='Showing your chosen plan: UMass UWW + UT Information Security and Integrity, aiming at ISD.';render();});
-document.getElementById('pbest').addEventListener('click',()=>{if(undoAct('pbest'))return; const prev=snap(); const role=by(P.roles,st.role);let best=null;
+document.getElementById('pbest').addEventListener('click',()=>{if(undoAct('pbest'))return; const prev=snap(); const role=roleOf(st);let best=null;
   P.ba.filter(progOK).forEach(b=>P.ma.filter(progOK).forEach(m=>{const e=evalPlan(b,m,role),c=(b.cost??5e5)+(m.cost??5e5);if(F.max&&c>F.max)return;if(!best||e.pct>best.p+1e-9||(Math.abs(e.pct-best.p)<1e-9&&c<best.c))best={p:e.pct,c,b:b.id,m:m.id};}));
   if(best){st.ba=best.b;st.ma=best.m;markAct('pbest',prev);document.getElementById('precmsg').textContent=`Best plan for ${role.title} within your filters (cheaper plan wins ties).`;} render();});
-document.getElementById('psave').addEventListener('click',()=>{ const dup=SV.some(s=>s.ba===st.ba&&s.ma===st.ma&&s.role===st.role); const m=document.getElementById('psavemsg');
+document.getElementById('psave').addEventListener('click',()=>{ const dup=SV.some(s=>s.ba===st.ba&&s.ma===st.ma&&s.role===st.role&&(s.post||'')===(st.post||'')); const m=document.getElementById('psavemsg');
   if(dup){m.textContent='This exact path is already saved. See the Saved paths tab.';return;}
   addSaved(st); renderSaved(); m.innerHTML='Saved. <a href="#saved">Compare it in Saved paths</a>.'; });
 const pick=t=>{st.sel=st.sel===t?null:t;render();};
 document.getElementById('pmap').addEventListener('click',e=>{const g=e.target.closest('.lane');if(g)pick(g.dataset.t);});
 document.getElementById('pmap').addEventListener('keydown',e=>{const g=e.target.closest('.lane');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(g.dataset.t);}});
-document.getElementById('pglance').addEventListener('click',e=>{const b=e.target.closest('.gl');if(b){st[b.dataset.k]=b.dataset.v;render();}});
-document.getElementById('ptiming').addEventListener('click',e=>{const b=e.target.closest('.tcard');if(b){st.role=b.dataset.r;render();document.getElementById('pmap').scrollIntoView({behavior:'smooth',block:'center'});}});
+document.getElementById('pglance').addEventListener('click',e=>{const b=e.target.closest('.gl');if(b){st[b.dataset.k]=b.dataset.v; if(b.dataset.k==='role') st.post=''; render();}});
+document.getElementById('ptiming').addEventListener('click',e=>{const b=e.target.closest('.tcard');if(b){st.role=b.dataset.r;st.post='';render();document.getElementById('pmap').scrollIntoView({behavior:'smooth',block:'center'});}});
 applyCost();
 // starting point: recommended for default filters, plus preloaded comparisons
 applyRec();
-const rec={ba:st.ba,ma:st.ma,role:st.role};
+const rec={ba:st.ba,ma:st.ma,role:st.role,post:''};
 addSaved(P.chosen,'My chosen plan: UWW + UT → ISD');
 addSaved(rec,'Recommended for my filters');
 addSaved({ba:'ksc',ma:'hesjrn',role:'mpuvvp'},'Visual storytelling: Keene State + Harvard ALM → More Perfect Union');
